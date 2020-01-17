@@ -157,22 +157,53 @@ class Shape(Object):
             self._handle, sim.sim_shapeintparam_static, not value)
         self.reset_dynamic_object()
 
+    def get_color_component(self, component: str) -> List[float]:
+        """Gets a specified color component of the shape.
+
+        :param component: The color component of the shape to get.
+        :return: The r, g, b values of the color component.
+        """
+        try:
+            return sim.simGetShapeColor(
+                self._handle, None, getattr(sim, component))
+        except Exception:
+            try:
+                return sim.simGetShapeColor(
+                    self._handle, None,
+                    getattr(sim, 'sim_colorcomponent_' + component))
+            except Exception as e:
+                raise(e)
+
+    def set_color_component(self, component: str, color: List[float]) -> None:
+        """Sets a specified color component of the shape.
+
+        :param component: The color component of the shape to be set.
+        :param color: The r, g, b values of the component.
+        """
+        try:
+            sim.simSetShapeColor(
+                self._handle, None, getattr(sim, component), color)
+        except Exception:
+            try:
+                sim.simSetShapeColor(
+                    self._handle, None,
+                    getattr(sim, 'sim_colorcomponent_' + component), color)
+            except Exception as e:
+                raise(e)
+
     def get_color(self) -> List[float]:
         """Gets the shape color.
 
         :return: The r, g, b values of the shape.
         """
-        return sim.simGetShapeColor(
-            self._handle, None, sim.sim_colorcomponent_ambient_diffuse)
+        return self.get_color_component('ambient_diffuse')
 
     def set_color(self, color: List[float]) -> None:
         """Sets the color of the shape.
 
         :param color: The r, g, b values of the shape.
-        :return:
         """
-        sim.simSetShapeColor(
-            self._handle, None, sim.sim_colorcomponent_ambient_diffuse, color)
+        self.set_color_component('ambient_diffuse', color)
 
     def get_mass(self) -> float:
         """Gets the mass of the shape.
