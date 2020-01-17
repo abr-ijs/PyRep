@@ -1,7 +1,8 @@
-from pyrep.backend import sim
+from pyrep.backend import sim, utils
 from pyrep.errors import *
 from pyrep.const import ObjectType
 from pyrep.errors import WrongObjectTypeError
+from pyrep.const import PYREP_SCRIPT_TYPE
 from typing import List, Tuple, Union
 import numpy as np
 
@@ -619,6 +620,26 @@ class Object(object):
         """
         return sim.simCheckDistance(
             self.get_handle(), other.get_handle(), -1)[6]
+
+    def randomize_color(self,
+                        components: List[float] = ['ambient_diffuse',
+                                                   'specular',
+                                                   'emission',
+                                                   'auxiliary']):
+        """Randomize the color of an object using HSV colour space.
+
+        Adapted from: https://github.com/mveres01/multi-contact-grasping.git
+        See: http://www.coppeliarobotics.com/helpFiles/en/regularApi/simSetShapeColor.htm
+
+        :param components: A list of color components of the object to be randomized.
+        """
+        color = [np.random.random(),
+                 np.random.random(),
+                 np.random.random()]
+
+        for component in components:
+            self.set_color_component(component, color)
+
 
     # === Private methods ===
 
