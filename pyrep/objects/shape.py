@@ -1,9 +1,12 @@
+import pyrep
 from typing import List, Tuple
 from pyrep.backend import sim
 from pyrep.objects.object import Object
 from pyrep.const import ObjectType, PrimitiveShape, TextureMappingMode
 from pyrep.textures.texture import Texture
 import os
+import re
+import numpy as np
 
 
 class Shape(Object):
@@ -205,6 +208,25 @@ class Shape(Object):
         """
         self.set_color_component('ambient_diffuse', color)
 
+    def randomize_color(self,
+                        components: List[float] = ['ambient_diffuse',
+                                                   'specular',
+                                                   'emission',
+                                                   'auxiliary']) -> None:
+        """Randomize the color of an object using HSV colour space.
+
+        Adapted from: https://github.com/mveres01/multi-contact-grasping.git
+
+        :param components: A list of color components of the object to be
+        randomized.
+        """
+        color = [np.random.random(),
+                 np.random.random(),
+                 np.random.random()]
+
+        for component in components:
+            self.set_color_component(component, color)
+
     def get_mass(self) -> float:
         """Gets the mass of the shape.
 
@@ -379,6 +401,53 @@ class Shape(Object):
         sim.simSetShapeTexture(
             self.get_handle(), texture.get_texture_id(), mapping_mode.value,
             options, list(uv_scaling), position, orientation)
+
+    def randomize_texture(self,
+                          texture_path: str = os.path.join(
+                              re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
+                              'share/pyrep/assets/textures/checkerboard.png')):
+        """Randomly assigns an object a with a checkerboard texture.
+
+        Adapted from: https://github.com/mveres01/multi-contact-grasping.git
+        This function will load a texture that exists on file, and apply it to
+        an object using random position and orientation offsets, with either a
+        planar, spherical, cylindrical, or cubic projection mapping.
+
+        :param texture_path: Path to the texture image file.
+        """
+        # Remove any textures that may be on the object already
+        # simSetShapeTexture(object_handle, -1, sim_texturemap_cube, 0, {0, 0})
+        self.remove_texture()
+
+        # Randomize texture params
+        uv_scaling = [np.random.random(), np.random.random()]
+        xy_g = [np.random.random(), np.random.random(), np.random.random()]
+
+        # Create the texture object
+        texture = Texture.create(texture_path, interpolate=True,
+                                 decal_mode=False, repeat_along_u=True,
+                                 repeat_along_v=True, uv_scaling=uv_scaling,
+                                 xy_g=xy_g)
+
+        # Randomize texture mapping params
+        mapping_modes = [TextureMappingMode.PLANE,
+                         TextureMappingMode.CYLINDER,
+                         TextureMappingMode.SPHERE,
+                         TextureMappingMode.CUBE]
+        mode = mapping_modes[np.random.randint(len(mapping_modes))]
+
+        position = [np.random.random(), np.random.random(), np.random.random()]
+        orientation = [np.random.random(), np.random.random(), np.random.random()]
+
+        # Then apply the texture to the object.
+        self.set_texture(texture=texture, mapping_mode=mode,
+                         interpolate=True,
+                         repeat_along_u=True, repeat_along_v=True,
+                         uv_scaling=uv_scaling,
+                         position=position, orientation=orientation)
+
+        # Remove the texture object
+        texture.remove()
 
     def ungroup(self) -> List['Shape']:
         """Ungroups a compound shape into several simple shapes.
