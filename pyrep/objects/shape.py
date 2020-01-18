@@ -403,7 +403,7 @@ class Shape(Object):
             options, list(uv_scaling), position, orientation)
 
     def randomize_texture(self,
-                          texture_path: str = os.path.join(
+                          filename: str = os.path.join(
                               re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
                               'share/pyrep/assets/textures/checkerboard.png')):
         """Randomly assigns an object a with a checkerboard texture.
@@ -413,7 +413,7 @@ class Shape(Object):
         an object using random position and orientation offsets, with either a
         planar, spherical, cylindrical, or cubic projection mapping.
 
-        :param texture_path: Path to the texture image file.
+        :param filename: Path to the texture image file.
         """
         # Remove any textures that may be on the object already
         # simSetShapeTexture(object_handle, -1, sim_texturemap_cube, 0, {0, 0})
@@ -424,10 +424,13 @@ class Shape(Object):
         xy_g = [np.random.random(), np.random.random(), np.random.random()]
 
         # Create the texture object
-        texture = Texture.create(texture_path, interpolate=True,
-                                 decal_mode=False, repeat_along_u=True,
-                                 repeat_along_v=True, uv_scaling=uv_scaling,
-                                 xy_g=xy_g)
+        shape, texture = pyrep.PyRep.create_texture(filename,
+                                                    interpolate=True,
+                                                    decal_mode=False,
+                                                    repeat_along_u=True,
+                                                    repeat_along_v=True,
+                                                    uv_scaling=uv_scaling,
+                                                    xy_g=xy_g)
 
         # Randomize texture mapping params
         mapping_modes = [TextureMappingMode.PLANE,
@@ -436,8 +439,10 @@ class Shape(Object):
                          TextureMappingMode.CUBE]
         mode = mapping_modes[np.random.randint(len(mapping_modes))]
 
-        position = [np.random.random(), np.random.random(), np.random.random()]
-        orientation = [np.random.random(), np.random.random(), np.random.random()]
+        position = [np.random.random(), np.random.random(),
+                    np.random.random()]
+        orientation = [np.random.random(), np.random.random(),
+                       np.random.random()]
 
         # Then apply the texture to the object.
         self.set_texture(texture=texture, mapping_mode=mode,
@@ -447,7 +452,7 @@ class Shape(Object):
                          position=position, orientation=orientation)
 
         # Remove the texture object
-        texture.remove()
+        shape.remove()
 
     def ungroup(self) -> List['Shape']:
         """Ungroups a compound shape into several simple shapes.

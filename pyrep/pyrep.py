@@ -250,8 +250,10 @@ class PyRep(object):
         handle = sim.simLoadModel(filename)
         return utils.to_type(handle)
 
-    def create_texture(self, filename: str, interpolate=True, decal_mode=False,
-                       repeat_along_u=False, repeat_along_v=False
+    @staticmethod
+    def create_texture(filename: str, interpolate=True, decal_mode=False,
+                       repeat_along_u=False, repeat_along_v=False,
+                       uv_scaling=[1., 1.], xy_g=[0., 0., 0.],
                        ) -> Tuple[Shape, Texture]:
         """Creates a planar shape that is textured.
 
@@ -261,6 +263,9 @@ class PyRep(object):
             won't be influenced by light conditions).
         :param repeat_along_u: Texture will be repeated along the U direction.
         :param repeat_along_v: Texture will be repeated along the V direction.
+        :param uv_scaling: The desired scaling of the texture along the U and V
+        directions.
+        :param xy_g: The texture x/y shift and the texture gamma rotation.
         :return: A tuple containing the textured plane and the texture.
         """
         options = 0
@@ -272,6 +277,17 @@ class PyRep(object):
             options |= 3
         if repeat_along_v:
             options |= 4
-        handle = sim.simCreateTexture(filename, options)
+
+        # Create the texture
+        handle = sim.simCreateTexture(filename, options, None,
+                                      uv_scaling, xy_g, 0, None)
+        texture_id = sim.simGetShapeTextureId(handle)
+
+        # Update the texture. If we don't do this (and a texture has previously
+        # been applied to an object) changes won't get picked up by the
+        # POV-Camera, although those using OpenGL seem to be able to.
+        data = sim.simReadTexture(texture_id, 0)
+        sim.simWriteTexture(texture_id, 0, data)
+
         s = Shape(handle)
         return s, s.get_texture()
