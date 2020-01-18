@@ -930,13 +930,35 @@ def simGetScriptAssociatedWithObject(objectHandle):
     ret = lib.simGetScriptAssociatedWithObject(objectHandle)
     return ret
 
+def simReadTexture(textureId, options, posX=0, posY=0, sizeX=0, sizeY=0):
+    ret = lib.simReadTexture(textureId, options, posX, posY, sizeX, sizeY)
+    _check_null_return(ret)
+    return ret
 
-def simCreateTexture(fileName, options):
+def simWriteTexture(textureId, options, textureData,
+                    posX=0, posY=0, sizeX=0, sizeY=0, interpolation=0):
+    ret = lib.simWriteTexture(textureId, options, textureData,
+                              posX, posY, sizeX, sizeY, interpolation)
+    _check_return(ret)
+    return ret
+
+def simCreateTexture(fileName, options, planeSizes, scalingUV, xy_g,
+                     fixedResolution, resolution):
+    if planeSizes is None:
+        planeSizes = ffi.NULL
+    if scalingUV is None:
+        scalingUV = ffi.NULL
+    if xy_g is None:
+        xy_g = ffi.NULL
+    if resolution is None:
+        resolution = ffi.NULL
+
     # The textureID param that is returned from simCreateTexture seems
     # to be incorrect (in regards to calling simGetShapeTextureId on the
     # generated plane).
-    handle = lib.simCreateTexture(fileName.encode('ascii'), options, ffi.NULL,
-                                  ffi.NULL, ffi.NULL, 0, ffi.NULL, ffi.NULL,
+    handle = lib.simCreateTexture(fileName.encode('ascii'), options,
+                                  planeSizes, scalingUV, xy_g,
+                                  fixedResolution, resolution, ffi.NULL,
                                   ffi.NULL)
     _check_return(handle)
     return handle
