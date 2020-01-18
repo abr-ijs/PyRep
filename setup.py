@@ -22,4 +22,5 @@ setup(name='PyRep',
                 ],
       ext_modules=[cffi_build.ffibuilder.distutils_extension(
           join('build', 'pyrep', 'backend'))],
+      data_files=[('share/pyrep/assets/textures', ['assets/textures/checkerboard.png'])]
       )
