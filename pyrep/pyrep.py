@@ -197,14 +197,16 @@ class PyRep(object):
         with self._step_lock:
             sim.simExtStep(False)
 
-    def set_simulation_timestep(self, dt: float) -> None:
+    @staticmethod
+    def set_simulation_timestep(dt: float) -> None:
         """Sets the simulation time step. Default is 0.05.
 
         :param dt: The time step value in seconds.
         """
         sim.simSetFloatParameter(sim.sim_floatparam_simulation_time_step, dt)
 
-    def set_configuration_tree(self, config_tree: bytes) -> None:
+    @staticmethod
+    def set_configuration_tree(config_tree: bytes) -> None:
         """Restores configuration information previously retrieved.
 
         Configuration information (object relative positions/orientations,
@@ -218,7 +220,8 @@ class PyRep(object):
         """
         sim.simSetConfigurationTree(config_tree)
 
-    def group_objects(self, objects: List[Shape]) -> Shape:
+    @staticmethod
+    def group_objects(objects: List[Shape]) -> Shape:
         """Groups several shapes into a compound shape (or simple shape).
 
         :param objects: The list of shapes to group.
@@ -228,7 +231,8 @@ class PyRep(object):
         handle = sim.simGroupShapes(handles)
         return Shape(handle)
 
-    def merge_objects(self, objects: List[Shape]) -> Shape:
+    @staticmethod
+    def merge_objects(objects: List[Shape]) -> Shape:
         """Merges several shapes into a compound shape (or simple shape).
 
         :param objects: The list of shapes to group.
@@ -238,7 +242,8 @@ class PyRep(object):
         handle = sim.simGroupShapes(handles, merge=True)
         return Shape(handle)
 
-    def import_model(self, filename: str) -> Object:
+    @staticmethod
+    def import_model(filename: str) -> Object:
         """	Loads a previously saved model.
 
         :param filename: model filename. The filename extension is required

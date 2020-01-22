@@ -4,6 +4,7 @@ from pyrep.const import ObjectType
 from pyrep.errors import WrongObjectTypeError
 from pyrep.const import PYREP_SCRIPT_TYPE
 from typing import List, Tuple, Union
+import numpy as np
 
 
 class Object(object):

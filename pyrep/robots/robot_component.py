@@ -1,7 +1,6 @@
 from typing import List, Tuple
-
+import pyrep
 from pyrep.objects.shape import Shape
-
 from pyrep.backend import sim
 from pyrep.const import JointType
 from pyrep.objects.object import Object
@@ -239,16 +238,67 @@ class RobotComponent(Object):
         """
         [j.set_joint_mode(value) for j in self.joints]
 
-    def get_visuals(self) -> List[Object]:
+    def get_visuals(self,
+                    search_strings: List[str]=['visual',
+                                               'visible']) -> List[Object]:
         """Gets a list of the visual elements of this component.
 
         Can be useful for methods such as domain randomization.
         Should ideally be overridden for each robot.
 
+        :param search_strings: A list of strings to search for in robot
+        elements that identify them as visual.
         :return: A list of visual shapes.
         """
         tree = self.get_objects_in_tree(ObjectType.SHAPE, exclude_base=False)
-        return [obj for obj in tree if 'visual' in obj.get_name()]
+        return [obj for obj in tree if
+                search_strings is None or
+                any([string in obj.get_name() for string in search_strings])]
+
+    def randomize_element_prop(self, element: Object, prop: str,
+                               texture_filename: str=None,
+                               search_strings: List[str]=None):
+        try:
+            # Try un-grouping compound shapes
+            compound_shape = Shape(element.get_name())
+            shapes = compound_shape.ungroup()
+            # If the un-grouped set of shapes is unary and the
+            # remaining shape has the same handle as the compound
+            # shape, then it's not a compound shape.
+            if (len(shapes) == 1 and
+                shapes[0].get_handle() == compound_shape.get_handle()):
+                raise Exception
+            # Otherwise, apply the property transform to the sub-shapes
+            for shape in shapes:
+                self.randomize_element_prop(shape, prop,
+                                            texture_filename,
+                                            search_strings)
+            # Make sure to re-group the shapes afterwards
+            compound_shape = pyrep.PyRep.group_objects(shapes)
+        except Exception:
+            shape = Shape(element.get_name())
+            if search_strings is None or any([string in shape.get_name()
+                                              for string in search_strings]):
+                if prop == 'color':
+                    shape.randomize_color()
+                elif prop == 'texture':
+                    if texture_filename is None:
+                        shape.randomize_texture()
+                    else:
+                        shape.randomize_texture(texture_filename)
+                else:
+                    raise(ValueError('Unknown element property: {}'
+                                     .format(prop)))
+
+    def randomize_colors(self, search_strings=None):
+        elements = self.get_visuals(search_strings)
+        for element in elements:
+            self.randomize_element_prop(element, 'color')
+
+    def randomize_textures(self, search_strings=None, filename: str=None):
+        elements = self.get_visuals(search_strings)
+        for element in elements:
+            self.randomize_element_prop(element, 'texture', filename)
 
     def _assert_len(self, inputs: list) -> None:
         if len(self.joints) != len(inputs):

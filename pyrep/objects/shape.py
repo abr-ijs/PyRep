@@ -416,8 +416,10 @@ class Shape(Object):
         :param filename: Path to the texture image file.
         """
         # Remove any textures that may be on the object already
-        # simSetShapeTexture(object_handle, -1, sim_texturemap_cube, 0, {0, 0})
-        self.remove_texture()
+        try:
+            self.remove_texture()
+        except Exception:
+            pass
 
         # Randomize texture params
         uv_scaling = [np.random.random(), np.random.random()]
@@ -445,14 +447,20 @@ class Shape(Object):
                        np.random.random()]
 
         # Then apply the texture to the object.
-        self.set_texture(texture=texture, mapping_mode=mode,
-                         interpolate=True,
-                         repeat_along_u=True, repeat_along_v=True,
-                         uv_scaling=uv_scaling,
-                         position=position, orientation=orientation)
+        try:
+            self.set_texture(texture=texture, mapping_mode=mode,
+                            interpolate=True,
+                            repeat_along_u=True, repeat_along_v=True,
+                            uv_scaling=uv_scaling,
+                            position=position, orientation=orientation)
+        except Exception as e:
+            shape.remove()
+            # sim.simRemoveObject(texture.get_texture_id())
+            raise(e)
 
         # Remove the texture object
         shape.remove()
+        # sim.simRemoveObject(texture.get_texture_id())
 
     def ungroup(self) -> List['Shape']:
         """Ungroups a compound shape into several simple shapes.
