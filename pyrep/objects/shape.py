@@ -208,25 +208,6 @@ class Shape(Object):
         """
         self.set_color_component('ambient_diffuse', color)
 
-    def randomize_color(self,
-                        components: List[float] = ['ambient_diffuse',
-                                                   'specular',
-                                                   'emission',
-                                                   'auxiliary']) -> None:
-        """Randomize the color of an object using HSV colour space.
-
-        Adapted from: https://github.com/mveres01/multi-contact-grasping.git
-
-        :param components: A list of color components of the object to be
-        randomized.
-        """
-        color = [np.random.random(),
-                 np.random.random(),
-                 np.random.random()]
-
-        for component in components:
-            self.set_color_component(component, color)
-
     def get_mass(self) -> float:
         """Gets the mass of the shape.
 
@@ -402,10 +383,38 @@ class Shape(Object):
             self.get_handle(), texture.get_texture_id(), mapping_mode.value,
             options, list(uv_scaling), position, orientation)
 
-    def randomize_texture(self,
-                          filename: str = os.path.join(
-                              re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
-                              'share/pyrep/assets/textures/checkerboard.png')):
+    def ungroup(self) -> List['Shape']:
+        """Ungroups a compound shape into several simple shapes.
+
+        :return: A list of shapes.
+        """
+        handles = sim.simUngroupShape(self.get_handle())
+        return [Shape(handle) for handle in handles]
+
+    def _randomize_color(self,
+                         components: List[float] = ['ambient_diffuse',
+                                                    'specular',
+                                                    'emission',
+                                                    'auxiliary']) -> None:
+        """Randomize the color of an object using HSV colour space.
+
+        Adapted from: https://github.com/mveres01/multi-contact-grasping.git
+
+        :param components: A list of color components of the object to be
+        randomized.
+        """
+        color = [np.random.random(),
+                 np.random.random(),
+                 np.random.random()]
+
+        for component in components:
+            self.set_color_component(component, color)
+
+
+    def _randomize_texture(self,
+                           filename: str = os.path.join(
+                               re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
+                               'share/pyrep/assets/textures/checkerboard.png')):
         """Randomly assigns an object a with a checkerboard texture.
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
@@ -449,23 +458,51 @@ class Shape(Object):
         # Then apply the texture to the object.
         try:
             self.set_texture(texture=texture, mapping_mode=mode,
-                            interpolate=True,
-                            repeat_along_u=True, repeat_along_v=True,
-                            uv_scaling=uv_scaling,
-                            position=position, orientation=orientation)
+                             interpolate=True,
+                             repeat_along_u=True, repeat_along_v=True,
+                             uv_scaling=uv_scaling,
+                             position=position, orientation=orientation)
         except Exception as e:
             shape.remove()
-            # sim.simRemoveObject(texture.get_texture_id())
             raise(e)
 
         # Remove the texture object
         shape.remove()
-        # sim.simRemoveObject(texture.get_texture_id())
 
-    def ungroup(self) -> List['Shape']:
-        """Ungroups a compound shape into several simple shapes.
+    def _randomize_prop(self, prop: str,
+                        search_strings: List[str]=None,
+                        texture_filename: str=None):
+        try:
+            # Try un-grouping compound shapes
+            shapes = self.ungroup()
+            # If the un-grouped set of shapes is unary and the
+            # remaining shape has the same handle as the compound
+            # shape, then it's not a compound shape.
+            if (len(shapes) == 1 and
+                shapes[0].get_handle() == self.get_handle()):
+                raise Exception
+            # Otherwise, apply the property transform to the sub-shapes
+            for shape in shapes:
+                shape._randomize_prop(prop, search_strings, texture_filename)
+            # Make sure to re-group the shapes afterwards
+            self = pyrep.PyRep.group_objects(shapes)
+        except Exception:
+            if search_strings is None or any([string in self.get_name()
+                                              for string in search_strings]):
+                if prop == 'color':
+                    self._randomize_color()
+                elif prop == 'texture':
+                    if texture_filename is None:
+                        self._randomize_texture()
+                    else:
+                        self._randomize_texture(texture_filename)
+                else:
+                    raise(ValueError('Unknown element property: {}'
+                                     .format(prop)))
 
-        :return: A list of shapes.
-        """
-        handles = sim.simUngroupShape(self.get_handle())
-        return [Shape(handle) for handle in handles]
+    def randomize_color(self, search_strings: List[str]=None):
+        self._randomize_prop('color', search_strings)
+
+    def randomize_texture(self, search_strings: List[str]=None,
+                          filename: str=None):
+        self._randomize_prop('texture', search_strings, filename)
