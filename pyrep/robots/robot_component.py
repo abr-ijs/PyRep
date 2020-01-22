@@ -255,12 +255,23 @@ class RobotComponent(Object):
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
 
-    def randomize_colors(self, search_strings=None):
+    def randomize_color(self, search_strings=None):
+        """Randomize surface color.
+
+        :param search_strings: A list of strings to search for to match shape
+        elements that should be modified (e.g. 'visual' or 'visible').
+        """
         elements = self.get_visuals(search_strings)
         for element in elements:
             Shape(element.get_handle()).randomize_color(search_strings)
 
-    def randomize_textures(self, search_strings=None, filename: str=None):
+    def randomize_texture(self, search_strings=None, filename: str=None):
+        """Randomize surface texture.
+
+        :param search_strings: A list of strings to search for to match shape
+        elements that should be modified (e.g. 'visual' or 'visible').
+        :param texture_filename: A specific texture image file path to be used.
+        """
         elements = self.get_visuals(search_strings)
         for element in elements:
             Shape(element.get_handle()).randomize_texture(search_strings, filename)

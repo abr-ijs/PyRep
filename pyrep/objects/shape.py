@@ -396,7 +396,7 @@ class Shape(Object):
                                                     'specular',
                                                     'emission',
                                                     'auxiliary']) -> None:
-        """Randomize the color of an object using HSV colour space.
+        """Randomize the color of an atomic shape using HSV colour space.
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
 
@@ -415,7 +415,7 @@ class Shape(Object):
                            filename: str = os.path.join(
                                re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
                                'share/pyrep/assets/textures/checkerboard.png')):
-        """Randomly assigns an object a with a checkerboard texture.
+        """Randomize surface texture of atomic shape using texture image file.
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
         This function will load a texture that exists on file, and apply it to
@@ -469,9 +469,21 @@ class Shape(Object):
         # Remove the texture object
         shape.remove()
 
-    def _randomize_prop(self, prop: str,
+    def _randomize_prop(self, prop: ['color', 'texture'],
                         search_strings: List[str]=None,
                         texture_filename: str=None):
+        """Randomize surface property (i.e. color or texture).
+
+        Compound shapes are recursively processed and the color or texture
+        properties are applied at the leaf nodes.
+
+        :param prop: The surface property to be randomized (i.e. 'color' or
+        'texture').
+        :param search_strings: A list of strings to search for to match shape
+        elements that should be modified (e.g. 'visual' or 'visible').
+        :param texture_filename: A specific texture image file path for surface
+        texture modification.
+        """
         try:
             # Try un-grouping compound shapes
             shapes = self.ungroup()
@@ -501,8 +513,19 @@ class Shape(Object):
                                      .format(prop)))
 
     def randomize_color(self, search_strings: List[str]=None):
+        """Randomize surface color.
+
+        :param search_strings: A list of strings to search for to match shape
+        elements that should be modified (e.g. 'visual' or 'visible').
+        """
         self._randomize_prop('color', search_strings)
 
     def randomize_texture(self, search_strings: List[str]=None,
                           filename: str=None):
+        """Randomize surface texture.
+
+        :param search_strings: A list of strings to search for to match shape
+        elements that should be modified (e.g. 'visual' or 'visible').
+        :param texture_filename: A specific texture image file path to be used.
+        """
         self._randomize_prop('texture', search_strings, filename)
