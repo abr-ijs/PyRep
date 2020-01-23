@@ -550,14 +550,14 @@ class Shape(Object):
                     else:
                         self._randomize_texture(seed, texture_filename)
                 else:
-                    raise(ValueError('Unknown element property: {}'
+                    raise(ValueError('Unknown shape property: {}'
                                      .format(prop)))
 
         return seed
 
     def randomize_color(self, group_depth: int=None, seed: int=None,
                         search_strings: List[str]=None):
-        """Randomize surface color.
+        """Randomize shape color.
 
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same color (None for no
@@ -571,7 +571,7 @@ class Shape(Object):
 
     def randomize_texture(self, group_depth: int=None, seed: int=None,
                           search_strings: List[str]=None, filename: str=None):
-        """Randomize surface texture.
+        """Randomize shape texture.
 
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same texture (None for

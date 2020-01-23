@@ -256,16 +256,24 @@ class RobotComponent(Object):
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
 
-    def randomize_color(self, group_depth: int=None, seed: int=None,
-                        search_strings=None):
-        """Randomize surface color.
+    def _randomize_prop(self,
+                        prop: ['color', 'texture'],
+                        group_depth: int=None,
+                        seed: int=None,
+                        search_strings=None,
+                        texture_filename: str=None):
+        """Randomize robot component property (i.e. color or texture).
 
+        :param prop: The shape property to be randomized (i.e. 'color' or
+            'texture').
         :param group_depth: The recursion depth at which to start grouping
-            sub-shapes of compound shapes to retain the same color (None for no
-            grouping, 0 for grouping at first depth level, etc.)
-        :param seed: A random seed to use for numpy's random number generator.
+            sub-shapes (None for no grouping, 0 for grouping at first depth
+            level, etc.)
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
+        :param texture_filename: A specific texture image file path for shape
+            texture modification.
+        :param seed: A random seed to use for numpy's random number generator.
         """
         # Handle the grouping/seeding
         if group_depth is not None and group_depth <= 0:
@@ -281,16 +289,36 @@ class RobotComponent(Object):
                 else:
                     seed += 1
             if group_depth is None:
-                seed = Shape(element.get_handle()).randomize_color(
-                    None, seed, search_strings)
+                _group_depth = None
             else:
+                _group_depth = group_depth - 1
+            if prop == 'color':
                 seed = Shape(element.get_handle()).randomize_color(
-                    group_depth-1, seed, search_strings)
+                    _group_depth, seed, search_strings)
+            elif prop == 'texture':
+                seed = Shape(element.get_handle()).randomize_texture(
+                    _group_depth, seed, search_strings)
+            else:
+                raise(ValueError('Unknown robot component property: {}'
+                                 .format(prop)))
+
+    def randomize_color(self, group_depth: int=None, seed: int=None,
+                        search_strings=None):
+        """Randomize robot component color.
+
+        :param group_depth: The recursion depth at which to start grouping
+            sub-shapes of compound shapes to retain the same color (None for no
+            grouping, 0 for grouping at first depth level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
+        :param search_strings: A list of strings to search for to match shape
+            elements that should be modified (e.g. 'visual' or 'visible').
+        """
+        self._randomize_prop('color', group_depth, seed, search_strings)
 
 
     def randomize_texture(self, group_depth: int=None, seed: int=None,
                           search_strings=None, filename: str=None):
-        """Randomize surface texture.
+        """Randomize robot component texture.
 
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same texture (None for
@@ -300,25 +328,8 @@ class RobotComponent(Object):
             elements that should be modified (e.g. 'visual' or 'visible').
         :param texture_filename: A specific texture image file path to be used.
         """
-        # Handle the grouping/seeding
-        if group_depth is not None and group_depth <= 0:
-            if seed is None:
-                seed = np.random.randint(2**32 - 1)
-
-        elements = self.get_visuals(search_strings)
-        for element in elements:
-            # Handle the grouping/seeding
-            if group_depth is not None and group_depth > 0:
-                if seed is None:
-                    seed = np.random.randint(2**32 - 1)
-                else:
-                    seed += 1
-            if group_depth is None:
-                seed = Shape(element.get_handle()).randomize_texture(
-                    None, seed, search_strings)
-            else:
-                seed = Shape(element.get_handle()).randomize_texture(
-                    group_depth-1, seed, search_strings)
+        self._randomize_prop('texture', group_depth, seed,
+                             search_strings, filename)
 
     def _assert_len(self, inputs: list) -> None:
         if len(self.joints) != len(inputs):
