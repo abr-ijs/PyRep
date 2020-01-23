@@ -260,6 +260,7 @@ class RobotComponent(Object):
                         prop: ['color', 'texture'],
                         group_depth: int=None,
                         seed: int=None,
+                        groups: List[List[str]]=None,
                         search_strings=None,
                         texture_filename: str=None):
         """Randomize robot component property (i.e. color or texture).
@@ -269,25 +270,51 @@ class RobotComponent(Object):
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes (None for no grouping, 0 for grouping at first depth
             level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
+        :param groups: A list of lists of names of visual elements that should
+            be grouped together with the same property.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
         :param texture_filename: A specific texture image file path for shape
             texture modification.
         :param seed: A random seed to use for numpy's random number generator.
         """
-        # Handle the grouping/seeding
+        def find_group_seed(groups, group_seeds, name):
+            """A convenience function for finding group/seed of element."""
+            for i_group, group in enumerate(groups):
+                if name in group:
+                    return group_seeds[i_group]
+            raise(ValueError('No group seed found!'))
+
+        # Set up grouping/seeding
         if group_depth is not None and group_depth <= 0:
             if seed is None:
                 seed = np.random.randint(2**32 - 1)
+        group_seeds = []
+        if groups is not None and seed is not None:
+            for _ in groups:
+                group_seeds.append(seed)
+                seed += 1
+        elif groups is not None and seed is None:
+            _seed = np.random.randint(2**32 - 1)
+            for _ in groups:
+                group_seeds.append(_seed)
+                _seed += 1
 
+        # Loop through visual elements
         elements = self.get_visuals(search_strings)
         for element in elements:
             # Handle the grouping/seeding
             if group_depth is not None and group_depth > 0:
-                if seed is None:
-                    seed = np.random.randint(2**32 - 1)
-                else:
-                    seed += 1
+                try:
+                    seed = find_group_seed(groups, group_seeds,
+                                           element.get_name())
+                except Exception:
+                    if seed is None:
+                        seed = np.random.randint(2**32 - 1)
+                    else:
+                        seed += 1
+            # Randomize the visual element
             if group_depth is None:
                 _group_depth = None
             else:
@@ -302,7 +329,10 @@ class RobotComponent(Object):
                 raise(ValueError('Unknown robot component property: {}'
                                  .format(prop)))
 
-    def randomize_color(self, group_depth: int=None, seed: int=None,
+    def randomize_color(self,
+                        group_depth: int=None,
+                        seed: int=None,
+                        groups: List[List[str]]=None,
                         search_strings=None):
         """Randomize robot component color.
 
@@ -310,13 +340,18 @@ class RobotComponent(Object):
             sub-shapes of compound shapes to retain the same color (None for no
             grouping, 0 for grouping at first depth level, etc.)
         :param seed: A random seed to use for numpy's random number generator.
+        :param groups: A list of lists of names of visual elements that should
+            be grouped together with the same color.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
         """
-        self._randomize_prop('color', group_depth, seed, search_strings)
+        self._randomize_prop('color', group_depth, seed, groups,
+                             search_strings)
 
-
-    def randomize_texture(self, group_depth: int=None, seed: int=None,
+    def randomize_texture(self,
+                          group_depth: int=None,
+                          seed: int=None,
+                          groups: List[List[str]]=None,
                           search_strings=None, filename: str=None):
         """Randomize robot component texture.
 
@@ -326,9 +361,11 @@ class RobotComponent(Object):
         :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
+        :param groups: A list of lists of names of visual elements that should
+            be grouped together with the same texture.
         :param texture_filename: A specific texture image file path to be used.
         """
-        self._randomize_prop('texture', group_depth, seed,
+        self._randomize_prop('texture', group_depth, seed, groups,
                              search_strings, filename)
 
     def _assert_len(self, inputs: list) -> None:
