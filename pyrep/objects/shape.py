@@ -481,19 +481,26 @@ class Shape(Object):
         # Remove the texture object
         shape.remove()
 
-    def _randomize_prop(self,
-                        prop: ['color', 'texture'],
-                        group_depth: int=None,
-                        seed: int=None,
-                        search_strings: List[str]=None,
-                        texture_filename: str=None,
-                        depth: int=0):
+    def randomize_property(self,
+                           prop: ['color', 'texture'],
+                           group_depth: int=None,
+                           seed: int=None,
+                           search_strings: List[str]=None,
+                           texture_filename: str=None,
+                           depth: int=0):
         """Randomize shape property (i.e. color or texture).
 
         Compound shapes are recursively processed and the color or texture
         properties are applied at the leaf nodes. Sub-shapes of compound shapes
         may be grouped by a specified group depth level such that they retain
         the same color or texture at that level of recursion depth.
+
+        NOTE: This is not as useful as it might sound since there seems to
+        be a difference between the way the context menu un-group works,
+        which un-groups compound shapes recursively, and the API un-group,
+        which seems to do a flat un-group. Having said that, it should still
+        work for depth 0 (homogenous color/texture for the whole shape)
+        and depth 1 (heterogenous colors/textures for sub-shapes).
 
         :param prop: The shape property to be randomized (i.e. 'color' or
             'texture').
@@ -517,14 +524,15 @@ class Shape(Object):
             if (len(shapes) == 1 and
                 shapes[0].get_handle() == self.get_handle()):
                 raise Exception
-            # Handle the grouping/seeding
+            # Set up the grouping/seeding
             if group_depth is not None and group_depth <= depth:
                 if seed is None:
                     seed = np.random.randint(2**32 - 1)
             # The un-group call is inconsistent, so we need to sort the shapes
             # list for consistent results with specified seeds.
             shape_handles = [shape.get_name() for shape in shapes]
-            i_sorted_shapes = sorted(range(len(shape_handles)), key=shape_handles.__getitem__)
+            i_sorted_shapes = sorted(range(len(shape_handles)),
+                                     key=shape_handles.__getitem__)
             sorted_shapes = [shapes[i] for i in i_sorted_shapes]
             # Otherwise, apply the property transform to the sub-shapes
             for shape in sorted_shapes:
@@ -535,8 +543,9 @@ class Shape(Object):
                     else:
                         seed += 1
                 # Recurse to the next depth level
-                seed = shape._randomize_prop(prop, group_depth, seed,
-                                             search_strings, texture_filename, depth+1)
+                seed = shape.randomize_property(prop, group_depth, seed,
+                                                search_strings,
+                                                texture_filename, depth+1)
             # Make sure to re-group the shapes afterwards
             self = pyrep.PyRep.group_objects(shapes)
         except Exception:
@@ -559,6 +568,8 @@ class Shape(Object):
                         search_strings: List[str]=None):
         """Randomize shape color.
 
+        Wrapper for Shape.randomize_property() method.
+
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same color (None for no
             grouping, 0 for grouping at first depth level, etc.)
@@ -567,11 +578,13 @@ class Shape(Object):
             elements that should be modified (e.g. 'visual' or 'visible').
         :return: The last used seed.
         """
-        return self._randomize_prop('color', group_depth, seed, search_strings)
+        return self.randomize_property('color', group_depth, seed, search_strings)
 
     def randomize_texture(self, group_depth: int=None, seed: int=None,
                           search_strings: List[str]=None, filename: str=None):
         """Randomize shape texture.
+
+        Wrapper for Shape.randomize_property() method.
 
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same texture (None for
@@ -582,5 +595,5 @@ class Shape(Object):
         :param texture_filename: A specific texture image file path to be used.
         :return: The last used seed.
         """
-        return self._randomize_prop('texture', group_depth, seed,
-                                    search_strings, filename)
+        return self.randomize_property('texture', group_depth, seed,
+                                       search_strings, filename)

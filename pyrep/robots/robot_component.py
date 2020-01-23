@@ -256,14 +256,29 @@ class RobotComponent(Object):
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
 
-    def _randomize_prop(self,
-                        prop: ['color', 'texture'],
-                        group_depth: int=None,
-                        seed: int=None,
-                        groups: List[List[str]]=None,
-                        search_strings=None,
-                        texture_filename: str=None):
+    def randomize_property(self,
+                           prop: ['color', 'texture'],
+                           group_depth: int=None,
+                           seed: int=None,
+                           groups: List[List[str]]=None,
+                           search_strings=None,
+                           texture_filename: str=None):
         """Randomize robot component property (i.e. color or texture).
+
+        Visual elements that should be grouped together with the same
+        color/texture may be specified with the 'groups' argument.
+
+        E.g., to randomize Panda arm colors in 3 groups:
+            groups = [['Panda_link0_visual', 'Panda_link1_visual',
+                       'Panda_link2_visual'],
+                      ['Panda_link3_visual', 'Panda_link4_visual',
+                       'Panda_link5_visual'],
+                      ['Panda_link6_visual', 'Panda_link7_visual',
+                       'Panda_gripper_visual', 'Panda_leftfinger_visible',
+                       'Panda_rightfinger_visual']]
+            agent.randomize_property('color', 1, groups=groups)
+
+        NOTE: This is currently only effective at depth 1.
 
         :param prop: The shape property to be randomized (i.e. 'color' or
             'texture').
@@ -336,6 +351,8 @@ class RobotComponent(Object):
                         search_strings=None):
         """Randomize robot component color.
 
+        Wrapper for RobotComponent.randomize_property() method.
+
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same color (None for no
             grouping, 0 for grouping at first depth level, etc.)
@@ -345,8 +362,8 @@ class RobotComponent(Object):
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
         """
-        self._randomize_prop('color', group_depth, seed, groups,
-                             search_strings)
+        self.randomize_property('color', group_depth, seed, groups,
+                                search_strings)
 
     def randomize_texture(self,
                           group_depth: int=None,
@@ -354,6 +371,8 @@ class RobotComponent(Object):
                           groups: List[List[str]]=None,
                           search_strings=None, filename: str=None):
         """Randomize robot component texture.
+
+        Wrapper for RobotComponent.randomize_property() method.
 
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes of compound shapes to retain the same texture (None for
@@ -365,8 +384,8 @@ class RobotComponent(Object):
             be grouped together with the same texture.
         :param texture_filename: A specific texture image file path to be used.
         """
-        self._randomize_prop('texture', group_depth, seed, groups,
-                             search_strings, filename)
+        self.randomize_property('texture', group_depth, seed, groups,
+                                search_strings, filename)
 
     def _assert_len(self, inputs: list) -> None:
         if len(self.joints) != len(inputs):
