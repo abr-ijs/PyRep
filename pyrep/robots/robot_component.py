@@ -6,6 +6,7 @@ from pyrep.const import JointType
 from pyrep.objects.object import Object
 from pyrep.objects.joint import Joint
 from pyrep.const import ObjectType, JointMode
+import numpy as np
 
 
 class RobotComponent(Object):
@@ -247,7 +248,7 @@ class RobotComponent(Object):
         Should ideally be overridden for each robot.
 
         :param search_strings: A list of strings to search for in robot
-        elements that identify them as visual.
+            elements that identify them as visual.
         :return: A list of visual shapes.
         """
         tree = self.get_objects_in_tree(ObjectType.SHAPE, exclude_base=False)
@@ -255,26 +256,69 @@ class RobotComponent(Object):
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
 
-    def randomize_color(self, search_strings=None):
+    def randomize_color(self, group_depth: int=None, seed: int=None,
+                        search_strings=None):
         """Randomize surface color.
 
+        :param group_depth: The recursion depth at which to start grouping
+            sub-shapes of compound shapes to retain the same color (None for no
+            grouping, 0 for grouping at first depth level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
-        elements that should be modified (e.g. 'visual' or 'visible').
+            elements that should be modified (e.g. 'visual' or 'visible').
         """
+        # Handle the grouping/seeding
+        if group_depth is not None and group_depth <= 0:
+            if seed is None:
+                seed = np.random.randint(2**32 - 1)
+
         elements = self.get_visuals(search_strings)
         for element in elements:
-            Shape(element.get_handle()).randomize_color(search_strings)
+            # Handle the grouping/seeding
+            if group_depth is not None and group_depth > 0:
+                if seed is None:
+                    seed = np.random.randint(2**32 - 1)
+                else:
+                    seed += 1
+            if group_depth is None:
+                seed = Shape(element.get_handle()).randomize_color(
+                    None, seed, search_strings)
+            else:
+                seed = Shape(element.get_handle()).randomize_color(
+                    group_depth-1, seed, search_strings)
 
-    def randomize_texture(self, search_strings=None, filename: str=None):
+
+    def randomize_texture(self, group_depth: int=None, seed: int=None,
+                          search_strings=None, filename: str=None):
         """Randomize surface texture.
 
+        :param group_depth: The recursion depth at which to start grouping
+            sub-shapes of compound shapes to retain the same texture (None for
+            no grouping, 0 for grouping at first depth level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
-        elements that should be modified (e.g. 'visual' or 'visible').
+            elements that should be modified (e.g. 'visual' or 'visible').
         :param texture_filename: A specific texture image file path to be used.
         """
+        # Handle the grouping/seeding
+        if group_depth is not None and group_depth <= 0:
+            if seed is None:
+                seed = np.random.randint(2**32 - 1)
+
         elements = self.get_visuals(search_strings)
         for element in elements:
-            Shape(element.get_handle()).randomize_texture(search_strings, filename)
+            # Handle the grouping/seeding
+            if group_depth is not None and group_depth > 0:
+                if seed is None:
+                    seed = np.random.randint(2**32 - 1)
+                else:
+                    seed += 1
+            if group_depth is None:
+                seed = Shape(element.get_handle()).randomize_texture(
+                    None, seed, search_strings)
+            else:
+                seed = Shape(element.get_handle()).randomize_texture(
+                    group_depth-1, seed, search_strings)
 
     def _assert_len(self, inputs: list) -> None:
         if len(self.joints) != len(inputs):

@@ -392,6 +392,7 @@ class Shape(Object):
         return [Shape(handle) for handle in handles]
 
     def _randomize_color(self,
+                         seed: int=None,
                          components: List[float] = ['ambient_diffuse',
                                                     'specular',
                                                     'emission',
@@ -400,9 +401,14 @@ class Shape(Object):
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
 
+        :param seed: A random seed to use for numpy's random number generator.
         :param components: A list of color components of the object to be
         randomized.
         """
+        # Seed the random number generator
+        if seed is not None:
+            np.random.seed(seed)
+
         color = [np.random.random(),
                  np.random.random(),
                  np.random.random()]
@@ -412,6 +418,7 @@ class Shape(Object):
 
 
     def _randomize_texture(self,
+                           seed: int=None,
                            filename: str = os.path.join(
                                re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
                                'share/pyrep/assets/textures/checkerboard.png')):
@@ -422,8 +429,13 @@ class Shape(Object):
         an object using random position and orientation offsets, with either a
         planar, spherical, cylindrical, or cubic projection mapping.
 
+        :param seed: A random seed to use for numpy's random number generator.
         :param filename: Path to the texture image file.
         """
+        # Seed the random number generator
+        if seed is not None:
+            np.random.seed(seed)
+
         # Remove any textures that may be on the object already
         try:
             self.remove_texture()
@@ -469,20 +481,32 @@ class Shape(Object):
         # Remove the texture object
         shape.remove()
 
-    def _randomize_prop(self, prop: ['color', 'texture'],
+    def _randomize_prop(self,
+                        prop: ['color', 'texture'],
+                        group_depth: int=None,
+                        seed: int=None,
                         search_strings: List[str]=None,
-                        texture_filename: str=None):
-        """Randomize surface property (i.e. color or texture).
+                        texture_filename: str=None,
+                        depth: int=0):
+        """Randomize shape property (i.e. color or texture).
 
         Compound shapes are recursively processed and the color or texture
-        properties are applied at the leaf nodes.
+        properties are applied at the leaf nodes. Sub-shapes of compound shapes
+        may be grouped by a specified group depth level such that they retain
+        the same color or texture at that level of recursion depth.
 
-        :param prop: The surface property to be randomized (i.e. 'color' or
-        'texture').
+        :param prop: The shape property to be randomized (i.e. 'color' or
+            'texture').
+        :param group_depth: The recursion depth at which to start grouping
+            sub-shapes (None for no grouping, 0 for grouping at first depth
+            level, etc.)
         :param search_strings: A list of strings to search for to match shape
-        elements that should be modified (e.g. 'visual' or 'visible').
-        :param texture_filename: A specific texture image file path for surface
-        texture modification.
+            elements that should be modified (e.g. 'visual' or 'visible').
+        :param texture_filename: A specific texture image file path for shape
+            texture modification.
+        :param seed: A random seed to use for numpy's random number generator.
+        :param depth: The current recursion depth level.
+        :return: The last used seed.
         """
         try:
             # Try un-grouping compound shapes
@@ -493,39 +517,70 @@ class Shape(Object):
             if (len(shapes) == 1 and
                 shapes[0].get_handle() == self.get_handle()):
                 raise Exception
+            # Handle the grouping/seeding
+            if group_depth is not None and group_depth <= depth:
+                if seed is None:
+                    seed = np.random.randint(2**32 - 1)
+            # The un-group call is inconsistent, so we need to sort the shapes
+            # list for consistent results with specified seeds.
+            shape_handles = [shape.get_name() for shape in shapes]
+            i_sorted_shapes = sorted(range(len(shape_handles)), key=shape_handles.__getitem__)
+            sorted_shapes = [shapes[i] for i in i_sorted_shapes]
             # Otherwise, apply the property transform to the sub-shapes
-            for shape in shapes:
-                shape._randomize_prop(prop, search_strings, texture_filename)
+            for shape in sorted_shapes:
+                # Handle the grouping/seeding
+                if group_depth is not None and group_depth > depth:
+                    if seed is None:
+                        seed = np.random.randint(2**32 - 1)
+                    else:
+                        seed += 1
+                # Recurse to the next depth level
+                seed = shape._randomize_prop(prop, group_depth, seed,
+                                             search_strings, texture_filename, depth+1)
             # Make sure to re-group the shapes afterwards
             self = pyrep.PyRep.group_objects(shapes)
         except Exception:
             if search_strings is None or any([string in self.get_name()
                                               for string in search_strings]):
                 if prop == 'color':
-                    self._randomize_color()
+                    self._randomize_color(seed)
                 elif prop == 'texture':
                     if texture_filename is None:
-                        self._randomize_texture()
+                        self._randomize_texture(seed)
                     else:
-                        self._randomize_texture(texture_filename)
+                        self._randomize_texture(seed, texture_filename)
                 else:
                     raise(ValueError('Unknown element property: {}'
                                      .format(prop)))
 
-    def randomize_color(self, search_strings: List[str]=None):
+        return seed
+
+    def randomize_color(self, group_depth: int=None, seed: int=None,
+                        search_strings: List[str]=None):
         """Randomize surface color.
 
+        :param group_depth: The recursion depth at which to start grouping
+            sub-shapes of compound shapes to retain the same color (None for no
+            grouping, 0 for grouping at first depth level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
-        elements that should be modified (e.g. 'visual' or 'visible').
+            elements that should be modified (e.g. 'visual' or 'visible').
+        :return: The last used seed.
         """
-        self._randomize_prop('color', search_strings)
+        return self._randomize_prop('color', group_depth, seed, search_strings)
 
-    def randomize_texture(self, search_strings: List[str]=None,
-                          filename: str=None):
+    def randomize_texture(self, group_depth: int=None, seed: int=None,
+                          search_strings: List[str]=None, filename: str=None):
         """Randomize surface texture.
 
+        :param group_depth: The recursion depth at which to start grouping
+            sub-shapes of compound shapes to retain the same texture (None for
+            no grouping, 0 for grouping at first depth level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
-        elements that should be modified (e.g. 'visual' or 'visible').
+            elements that should be modified (e.g. 'visual' or 'visible').
         :param texture_filename: A specific texture image file path to be used.
+        :return: The last used seed.
         """
-        self._randomize_prop('texture', search_strings, filename)
+        return self._randomize_prop('texture', group_depth, seed,
+                                    search_strings, filename)
