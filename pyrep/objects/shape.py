@@ -414,10 +414,12 @@ class Shape(Object):
         if seed is not None:
             np.random.seed(seed)
 
-        color = [np.random.uniform(rgb_ranges[0][0], rgb_ranges[0][1], 1)[0],
-                 np.random.uniform(rgb_ranges[1][0], rgb_ranges[1][1], 1)[0],
-                 np.random.uniform(rgb_ranges[2][0], rgb_ranges[2][1], 1)[0]]
+        # Sample
+        rgb_ranges = np.asarray(rgb_ranges)
+        color = list(np.random.uniform(rgb_ranges[:, 0], rgb_ranges[:, 1],
+                                  len(rgb_ranges)))
 
+        # Set the color components of the shape
         for component in components:
             self.set_color_component(component, color)
 
