@@ -3,6 +3,7 @@ from pyrep.objects.object import Object
 from pyrep.objects.shape import Shape
 from pyrep.textures.texture import Texture
 from pyrep.errors import PyRepError
+from pyrep.const import ObjectType
 import os
 import sys
 import time
@@ -296,3 +297,31 @@ class PyRep(object):
 
         s = Shape(handle)
         return s, s.get_texture()
+
+    @staticmethod
+    def get_objects(object_type=ObjectType.ALL) -> List['Object']:
+        """Retrieves the objects in the current scene.
+
+        :param object_type: The object type to retrieve.
+            One of :py:class:`.ObjectType`.
+        :return: A list of objects in the scene.
+        """
+        handles = sim.simGetObjects(object_type.value)
+        objects = []
+        for h in handles:
+            objects.append(Object(h))
+        return objects
+
+    @staticmethod
+    def get_lights(search_strings: List[str]=['light',
+                                                    'Light']) -> List[Object]:
+        """Gets a list of the lights in the scene.
+
+        :param search_strings: A list of strings to search for in robot
+            elements that identify them as lights.
+        :return: A list of visual shapes.
+        """
+        objects = PyRep.get_objects(ObjectType.LIGHT)
+        return [obj for obj in objects if
+                search_strings is None or
+                any([string in obj.get_name() for string in search_strings])]
