@@ -393,25 +393,30 @@ class Shape(Object):
 
     def _randomize_color(self,
                          seed: int=None,
-                         components: List[float] = ['ambient_diffuse',
-                                                    'specular',
-                                                    'emission',
-                                                    'auxiliary']) -> None:
+                         components: List[float]=['ambient_diffuse',
+                                                  'specular',
+                                                  'emission',
+                                                  'auxiliary'],
+                         rgb_ranges: List[List[float]]=[[0., 1.],
+                                                        [0., 1.],
+                                                        [0., 1.]]) -> None:
         """Randomize the color of an atomic shape using HSV colour space.
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
 
         :param seed: A random seed to use for numpy's random number generator.
         :param components: A list of color components of the object to be
-        randomized.
+            randomized.
+        :param rgb_ranges: A list of ranges within which the RGB color values
+            should be uniformly sampled.
         """
         # Seed the random number generator
         if seed is not None:
             np.random.seed(seed)
 
-        color = [np.random.random(),
-                 np.random.random(),
-                 np.random.random()]
+        color = [np.random.uniform(rgb_ranges[0][0], rgb_ranges[0][1], 1)[0],
+                 np.random.uniform(rgb_ranges[1][0], rgb_ranges[1][1], 1)[0],
+                 np.random.uniform(rgb_ranges[2][0], rgb_ranges[2][1], 1)[0]]
 
         for component in components:
             self.set_color_component(component, color)
@@ -486,8 +491,15 @@ class Shape(Object):
                            group_depth: int=None,
                            seed: int=None,
                            search_strings: List[str]=None,
+                           color_components: List[float]=['ambient_diffuse',
+                                                          'specular',
+                                                          'emission',
+                                                          'auxiliary'],
+                           color_rgb_ranges: List[List[float]]=[[0., 1.],
+                                                                [0., 1.],
+                                                                [0., 1.]],
                            texture_filename: str=None,
-                           depth: int=0):
+                           depth: int=0) -> int:
         """Randomize shape property (i.e. color or texture).
 
         Compound shapes are recursively processed and the color or texture
@@ -507,11 +519,15 @@ class Shape(Object):
         :param group_depth: The recursion depth at which to start grouping
             sub-shapes (None for no grouping, 0 for grouping at first depth
             level, etc.)
+        :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
+        :param color_components: A list of color components of the object to be
+            randomized.
+        :param color_rgb_ranges: A list of ranges within which the RGB color
+            values should be uniformly sampled.
         :param texture_filename: A specific texture image file path for shape
             texture modification.
-        :param seed: A random seed to use for numpy's random number generator.
         :param depth: The current recursion depth level.
         :return: The last used seed.
         """
@@ -543,16 +559,24 @@ class Shape(Object):
                     else:
                         seed += 1
                 # Recurse to the next depth level
-                seed = shape.randomize_property(prop, group_depth, seed,
-                                                search_strings,
-                                                texture_filename, depth+1)
+                seed = shape.randomize_property(
+                    prop=prop,
+                    group_depth=group_depth,
+                    seed=seed,
+                    search_strings=search_strings,
+                    color_components=color_components,
+                    color_rgb_ranges=color_rgb_ranges,
+                    texture_filename=texture_filename,
+                    depth=depth+1)
             # Make sure to re-group the shapes afterwards
             self = pyrep.PyRep.group_objects(shapes)
         except Exception:
             if search_strings is None or any([string in self.get_name()
                                               for string in search_strings]):
                 if prop == 'color':
-                    self._randomize_color(seed)
+                    self._randomize_color(seed,
+                                          components=color_components,
+                                          rgb_ranges=color_rgb_ranges)
                 elif prop == 'texture':
                     if texture_filename is None:
                         self._randomize_texture(seed)
@@ -564,8 +588,17 @@ class Shape(Object):
 
         return seed
 
-    def randomize_color(self, group_depth: int=None, seed: int=None,
-                        search_strings: List[str]=None):
+    def randomize_color(self,
+                        group_depth: int=None,
+                        seed: int=None,
+                        search_strings: List[str]=None,
+                        components: List[float]=['ambient_diffuse',
+                                                 'specular',
+                                                 'emission',
+                                                 'auxiliary'],
+                        rgb_ranges: List[List[float]]=[[0., 1.],
+                                                       [0., 1.],
+                                                       [0., 1.]]) -> int:
         """Randomize shape color.
 
         Wrapper for Shape.randomize_property() method.
@@ -576,9 +609,18 @@ class Shape(Object):
         :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
+        :param components: A list of color components of the object to be
+            randomized.
+        :param rgb_ranges: A list of ranges within which the RGB color values
+            should be uniformly sampled.
         :return: The last used seed.
         """
-        return self.randomize_property('color', group_depth, seed, search_strings)
+        return self.randomize_property(prop='color',
+                                       group_depth=group_depth,
+                                       seed=seed,
+                                       search_strings=search_strings,
+                                       color_components=components,
+                                       color_rgb_ranges=rgb_ranges)
 
     def randomize_texture(self, group_depth: int=None, seed: int=None,
                           search_strings: List[str]=None, filename: str=None):
@@ -592,8 +634,11 @@ class Shape(Object):
         :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
-        :param texture_filename: A specific texture image file path to be used.
+        :param filename: A specific texture image file path to be used.
         :return: The last used seed.
         """
-        return self.randomize_property('texture', group_depth, seed,
-                                       search_strings, filename)
+        return self.randomize_property(prop='texture',
+                                       group_depth=group_depth,
+                                       seed=seed,
+                                       search_strings=search_strings,
+                                       texture_filename=filename)

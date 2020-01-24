@@ -262,6 +262,13 @@ class RobotComponent(Object):
                            seed: int=None,
                            groups: List[List[str]]=None,
                            search_strings=None,
+                           color_components: List[float]=['ambient_diffuse',
+                                                          'specular',
+                                                          'emission',
+                                                          'auxiliary'],
+                           color_rgb_ranges: List[List[float]]=[[0., 1.],
+                                                                [0., 1.],
+                                                                [0., 1.]],
                            texture_filename: str=None):
         """Randomize robot component property (i.e. color or texture).
 
@@ -290,6 +297,10 @@ class RobotComponent(Object):
             be grouped together with the same property.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
+        :param color_components: A list of color components of the object to be
+            randomized.
+        :param color_rgb_ranges: A list of ranges within which the RGB color
+            values should be uniformly sampled.
         :param texture_filename: A specific texture image file path for shape
             texture modification.
         :param seed: A random seed to use for numpy's random number generator.
@@ -336,10 +347,17 @@ class RobotComponent(Object):
                 _group_depth = group_depth - 1
             if prop == 'color':
                 seed = Shape(element.get_handle()).randomize_color(
-                    _group_depth, seed, search_strings)
+                    group_depth=_group_depth,
+                    seed=seed,
+                    search_strings=search_strings,
+                    components=color_components,
+                    rgb_ranges=color_rgb_ranges)
             elif prop == 'texture':
                 seed = Shape(element.get_handle()).randomize_texture(
-                    _group_depth, seed, search_strings)
+                    group_depth=_group_depth,
+                    seed=seed,
+                    search_strings=search_strings,
+                    filename=texture_filename)
             else:
                 raise(ValueError('Unknown robot component property: {}'
                                  .format(prop)))
@@ -348,7 +366,14 @@ class RobotComponent(Object):
                         group_depth: int=None,
                         seed: int=None,
                         groups: List[List[str]]=None,
-                        search_strings=None):
+                        search_strings=None,
+                        components: List[float]=['ambient_diffuse',
+                                                 'specular',
+                                                 'emission',
+                                                 'auxiliary'],
+                        rgb_ranges: List[List[float]]=[[0., 1.],
+                                                       [0., 1.],
+                                                       [0., 1.]]):
         """Randomize robot component color.
 
         Wrapper for RobotComponent.randomize_property() method.
@@ -361,15 +386,25 @@ class RobotComponent(Object):
             be grouped together with the same color.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
+        :param components: A list of color components of the object to be
+            randomized.
+        :param rgb_ranges: A list of ranges within which the RGB color values
+            should be uniformly sampled.
         """
-        self.randomize_property('color', group_depth, seed, groups,
-                                search_strings)
+        self.randomize_property(prop='color',
+                                group_depth=group_depth,
+                                seed=seed,
+                                groups=groups,
+                                search_strings=search_strings,
+                                color_components=components,
+                                color_rgb_ranges=rgb_ranges)
 
     def randomize_texture(self,
                           group_depth: int=None,
                           seed: int=None,
                           groups: List[List[str]]=None,
-                          search_strings=None, filename: str=None):
+                          search_strings=None,
+                          filename: str=None):
         """Randomize robot component texture.
 
         Wrapper for RobotComponent.randomize_property() method.
@@ -378,14 +413,18 @@ class RobotComponent(Object):
             sub-shapes of compound shapes to retain the same texture (None for
             no grouping, 0 for grouping at first depth level, etc.)
         :param seed: A random seed to use for numpy's random number generator.
-        :param search_strings: A list of strings to search for to match shape
-            elements that should be modified (e.g. 'visual' or 'visible').
         :param groups: A list of lists of names of visual elements that should
             be grouped together with the same texture.
-        :param texture_filename: A specific texture image file path to be used.
+        :param search_strings: A list of strings to search for to match shape
+            elements that should be modified (e.g. 'visual' or 'visible').
+        :param filename: A specific texture image file path to be used.
         """
-        self.randomize_property('texture', group_depth, seed, groups,
-                                search_strings, filename)
+        self.randomize_property(prop='texture',
+                                group_depth=group_depth,
+                                seed=seed,
+                                groups=groups,
+                                search_strings=search_strings,
+                                texture_filename=filename)
 
     def _assert_len(self, inputs: list) -> None:
         if len(self.joints) != len(inputs):
