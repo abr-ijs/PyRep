@@ -1,6 +1,7 @@
 from pyrep.backend import sim, utils
 from pyrep.objects.object import Object
 from pyrep.objects.shape import Shape
+from pyrep.objects.light import Light
 from pyrep.textures.texture import Texture
 from pyrep.errors import PyRepError
 from pyrep.const import ObjectType
@@ -314,7 +315,7 @@ class PyRep(object):
 
     @staticmethod
     def get_lights(search_strings: List[str]=['light',
-                                                    'Light']) -> List[Object]:
+                                              'Light']) -> List[Object]:
         """Gets a list of the lights in the scene.
 
         :param search_strings: A list of strings to search for in robot
@@ -322,6 +323,6 @@ class PyRep(object):
         :return: A list of visual shapes.
         """
         objects = PyRep.get_objects(ObjectType.LIGHT)
-        return [obj for obj in objects if
+        return [Light(obj.get_handle()) for obj in objects if
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
