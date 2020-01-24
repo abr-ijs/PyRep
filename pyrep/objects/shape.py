@@ -391,22 +391,19 @@ class Shape(Object):
         handles = sim.simUngroupShape(self.get_handle())
         return [Shape(handle) for handle in handles]
 
-    def _randomize_color(self,
-                         seed: int=None,
-                         components: List[float]=['ambient_diffuse',
-                                                  'specular',
-                                                  'emission',
-                                                  'auxiliary'],
-                         rgb_ranges: List[List[float]]=[[0., 1.],
-                                                        [0., 1.],
-                                                        [0., 1.]]) -> None:
+    def _randomize_color(self, seed: int=None,
+                         components: List[str]=[
+                             'ambient_diffuse', 'specular',
+                             'emission', 'auxiliary'],
+                         rgb_ranges: List[List[float]]=[
+                             [0., 1.], [0., 1.], [0., 1.]]) -> None:
         """Randomize the color of an atomic shape using HSV colour space.
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
 
         :param seed: A random seed to use for numpy's random number generator.
-        :param components: A list of color components of the object to be
-            randomized.
+        :param components: A list of possible color components of the object to
+            be randomly selected from.
         :param rgb_ranges: A list of ranges within which the RGB color values
             should be uniformly sampled.
         """
@@ -423,12 +420,20 @@ class Shape(Object):
         for component in components:
             self.set_color_component(component, color)
 
-
-    def _randomize_texture(self,
-                           seed: int=None,
+    def _randomize_texture(self, seed: int=None,
                            filename: str = os.path.join(
                                re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
-                               'share/pyrep/assets/textures/checkerboard.png')):
+                               'share/pyrep/assets/textures/checkerboard.png'),
+                           uv_scaling_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.]],
+                           xy_g_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
+                           mapping_modes: List[str]=[
+                               'plane', 'cylinder', 'sphere', 'cube'],
+                           position_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
+                           orientation_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]]) -> None:
         """Randomize surface texture of atomic shape using texture image file.
 
         Adapted from: https://github.com/mveres01/multi-contact-grasping.git
@@ -438,10 +443,31 @@ class Shape(Object):
 
         :param seed: A random seed to use for numpy's random number generator.
         :param filename: Path to the texture image file.
+        :param uv_scaling_ranges: A list of ranges within which the UV scaling
+            values should be uniformly sampled from, those being 2 values that
+            indicate the texture scaling factors along the U and V directions.
+        :param xy_g_ranges: A list of ranges within which the xy_g texture
+            creation values should be uniformly sampled from, those being the
+            texture x/y shift and the texture gamma-rotation.
+        :param mapping_modes: A list of possible texture mapping modes to be
+            randomly selected from.
+        :param position_ranges: A list of ranges within which the texture
+            position values should be uniformly sampled from, those being the
+            (x,y,z) values that indicate the texture position on the shape.
+        :param orientation_ranges: A list of ranges within which the texture
+            orientation values should be uniformly sampled from, those being
+            the Euler angles that indicate the texture orientation on the
+            shape.
         """
         # Seed the random number generator
         if seed is not None:
             np.random.seed(seed)
+
+        # If the filename is None, use the default
+        if filename is None:
+            filename = os.path.join(
+                re.sub(r'\/lib\/.*', '/', pyrep.__path__[0]),
+                'share/pyrep/assets/textures/checkerboard.png')
 
         # Remove any textures that may be on the object already
         try:
@@ -450,8 +476,14 @@ class Shape(Object):
             pass
 
         # Randomize texture params
-        uv_scaling = [np.random.random(), np.random.random()]
-        xy_g = [np.random.random(), np.random.random(), np.random.random()]
+        uv_scaling_ranges = np.asarray(uv_scaling_ranges)
+        uv_scaling = list(np.random.uniform(uv_scaling_ranges[:, 0],
+                                            uv_scaling_ranges[:, 1],
+                                            len(uv_scaling_ranges)))
+        xy_g_ranges = np.asarray(xy_g_ranges)
+        xy_g = list(np.random.uniform(xy_g_ranges[:, 0],
+                                      xy_g_ranges[:, 1],
+                                      len(xy_g_ranges)))
 
         # Create the texture object
         shape, texture = pyrep.PyRep.create_texture(filename,
@@ -463,16 +495,19 @@ class Shape(Object):
                                                     xy_g=xy_g)
 
         # Randomize texture mapping params
-        mapping_modes = [TextureMappingMode.PLANE,
-                         TextureMappingMode.CYLINDER,
-                         TextureMappingMode.SPHERE,
-                         TextureMappingMode.CUBE]
+        mapping_modes = [getattr(TextureMappingMode, mm.upper())
+                         for mm in mapping_modes]
         mode = mapping_modes[np.random.randint(len(mapping_modes))]
 
-        position = [np.random.random(), np.random.random(),
-                    np.random.random()]
-        orientation = [np.random.random(), np.random.random(),
-                       np.random.random()]
+        # Randomize position & orientation
+        position_ranges = np.asarray(position_ranges)
+        position = list(np.random.uniform(position_ranges[:, 0],
+                                          position_ranges[:, 1],
+                                          len(position_ranges)))
+        orientation_ranges = np.asarray(orientation_ranges)
+        orientation = list(np.random.uniform(orientation_ranges[:, 0],
+                                             orientation_ranges[:, 1],
+                                             len(orientation_ranges)))
 
         # Then apply the texture to the object.
         try:
@@ -493,14 +528,22 @@ class Shape(Object):
                            group_depth: int=None,
                            seed: int=None,
                            search_strings: List[str]=None,
-                           color_components: List[float]=['ambient_diffuse',
-                                                          'specular',
-                                                          'emission',
-                                                          'auxiliary'],
-                           color_rgb_ranges: List[List[float]]=[[0., 1.],
-                                                                [0., 1.],
-                                                                [0., 1.]],
+                           color_components: List[str]=[
+                               'ambient_diffuse', 'specular',
+                               'emission', 'auxiliary'],
+                           color_rgb_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
                            texture_filename: str=None,
+                           texture_uv_scaling_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.]],
+                           texture_xy_g_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
+                           texture_mapping_modes: List[str]=[
+                               'plane', 'cylinder', 'sphere', 'cube'],
+                           texture_position_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
+                           texture_orientation_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
                            depth: int=0) -> int:
         """Randomize shape property (i.e. color or texture).
 
@@ -524,12 +567,29 @@ class Shape(Object):
         :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
-        :param color_components: A list of color components of the object to be
-            randomized.
+        :param color_components: A list of possible color components of the
+            object to be randomly selected from.
         :param color_rgb_ranges: A list of ranges within which the RGB color
             values should be uniformly sampled.
         :param texture_filename: A specific texture image file path for shape
             texture modification.
+        :param texture_uv_scaling_ranges: A list of ranges within which the UV
+            scaling values should be uniformly sampled from, those being 2
+            values that indicate the texture scaling factors along the U and V
+            directions.
+        :param texture_xy_g_ranges: A list of ranges within which the xy_g
+            texture creation values should be uniformly sampled from, those
+            being the texture x/y shift and the texture gamma-rotation.
+        :param texture_mapping_modes: A list of possible texture mapping modes
+            to be randomly selected from.
+        :param texture_position_ranges: A list of ranges within which the
+            texture position values should be uniformly sampled from, those
+            being the (x,y,z) values that indicate the texture position on the
+            shape.
+        :param texture_orientation_ranges: A list of ranges within which the
+            texture orientation values should be uniformly sampled from, those
+            being the Euler angles that indicate the texture orientation on the
+            shape.
         :param depth: The current recursion depth level.
         :return: The last used seed.
         """
@@ -569,6 +629,11 @@ class Shape(Object):
                     color_components=color_components,
                     color_rgb_ranges=color_rgb_ranges,
                     texture_filename=texture_filename,
+                    texture_uv_scaling_ranges=texture_uv_scaling_ranges,
+                    texture_xy_g_ranges=texture_xy_g_ranges,
+                    texture_mapping_modes=texture_mapping_modes,
+                    texture_position_ranges=texture_position_ranges,
+                    texture_orientation_ranges=texture_orientation_ranges,
                     depth=depth+1)
             # Make sure to re-group the shapes afterwards
             self = pyrep.PyRep.group_objects(shapes)
@@ -576,14 +641,19 @@ class Shape(Object):
             if search_strings is None or any([string in self.get_name()
                                               for string in search_strings]):
                 if prop == 'color':
-                    self._randomize_color(seed,
-                                          components=color_components,
-                                          rgb_ranges=color_rgb_ranges)
+                    self._randomize_color(
+                        seed=seed,
+                        components=color_components,
+                        rgb_ranges=color_rgb_ranges)
                 elif prop == 'texture':
-                    if texture_filename is None:
-                        self._randomize_texture(seed)
-                    else:
-                        self._randomize_texture(seed, texture_filename)
+                    self._randomize_texture(
+                        seed=seed,
+                        filename=texture_filename,
+                        uv_scaling_ranges=texture_uv_scaling_ranges,
+                        xy_g_ranges=texture_xy_g_ranges,
+                        mapping_modes=texture_mapping_modes,
+                        position_ranges=texture_position_ranges,
+                        orientation_ranges=texture_orientation_ranges)
                 else:
                     raise(ValueError('Unknown shape property: {}'
                                      .format(prop)))
@@ -594,13 +664,11 @@ class Shape(Object):
                         group_depth: int=None,
                         seed: int=None,
                         search_strings: List[str]=None,
-                        components: List[float]=['ambient_diffuse',
-                                                 'specular',
-                                                 'emission',
-                                                 'auxiliary'],
-                        rgb_ranges: List[List[float]]=[[0., 1.],
-                                                       [0., 1.],
-                                                       [0., 1.]]) -> int:
+                        components: List[str]=[
+                            'ambient_diffuse', 'specular',
+                            'emission', 'auxiliary'],
+                        rgb_ranges: List[List[float]]=[
+                            [0., 1.], [0., 1.], [0., 1.]]) -> int:
         """Randomize shape color.
 
         Wrapper for Shape.randomize_property() method.
@@ -611,8 +679,8 @@ class Shape(Object):
         :param seed: A random seed to use for numpy's random number generator.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
-        :param components: A list of color components of the object to be
-            randomized.
+        :param components: A list of possible color components of the object to
+            be randomly selected from.
         :param rgb_ranges: A list of ranges within which the RGB color values
             should be uniformly sampled.
         :return: The last used seed.
@@ -624,8 +692,21 @@ class Shape(Object):
                                        color_components=components,
                                        color_rgb_ranges=rgb_ranges)
 
-    def randomize_texture(self, group_depth: int=None, seed: int=None,
-                          search_strings: List[str]=None, filename: str=None):
+    def randomize_texture(self,
+                          group_depth: int=None,
+                          seed: int=None,
+                          search_strings: List[str]=None,
+                          filename: str=None,
+                          uv_scaling_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.]],
+                          xy_g_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.], [0., 1.]],
+                          mapping_modes: List[str]=[
+                              'plane', 'cylinder', 'sphere', 'cube'],
+                          position_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.], [0., 1.]],
+                          orientation_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.], [0., 1.]]) -> int:
         """Randomize shape texture.
 
         Wrapper for Shape.randomize_property() method.
@@ -637,10 +718,31 @@ class Shape(Object):
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
         :param filename: A specific texture image file path to be used.
+        :param uv_scaling_ranges: A list of ranges within which the UV scaling
+            values should be uniformly sampled from, those being 2 values that
+            indicate the texture scaling factors along the U and V directions.
+        :param xy_g_ranges: A list of ranges within which the xy_g texture
+            creation values should be uniformly sampled from, those being the
+            texture x/y shift and the texture gamma-rotation.
+        :param mapping_modes: A list of possible texture mapping modes to be
+            randomly selected from.
+        :param position_ranges: A list of ranges within which the texture
+            position values should be uniformly sampled from, those being the
+            (x,y,z) values that indicate the texture position on the shape.
+        :param orientation_ranges: A list of ranges within which the texture
+            orientation values should be uniformly sampled from, those being
+            the Euler angles that indicate the texture orientation on the
+            shape.
         :return: The last used seed.
         """
-        return self.randomize_property(prop='texture',
-                                       group_depth=group_depth,
-                                       seed=seed,
-                                       search_strings=search_strings,
-                                       texture_filename=filename)
+        return self.randomize_property(
+            prop='texture',
+            group_depth=group_depth,
+            seed=seed,
+            search_strings=search_strings,
+            texture_filename=filename,
+            texture_uv_scaling_ranges=uv_scaling_ranges,
+            texture_xy_g_ranges=xy_g_ranges,
+            texture_mapping_modes=mapping_modes,
+            texture_position_ranges=position_ranges,
+            texture_orientation_ranges=orientation_ranges)

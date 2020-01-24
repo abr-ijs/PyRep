@@ -262,14 +262,24 @@ class RobotComponent(Object):
                            seed: int=None,
                            groups: List[List[str]]=None,
                            search_strings=None,
-                           color_components: List[float]=['ambient_diffuse',
-                                                          'specular',
-                                                          'emission',
-                                                          'auxiliary'],
+                           color_components: List[str]=['ambient_diffuse',
+                                                        'specular',
+                                                        'emission',
+                                                        'auxiliary'],
                            color_rgb_ranges: List[List[float]]=[[0., 1.],
                                                                 [0., 1.],
                                                                 [0., 1.]],
-                           texture_filename: str=None):
+                           texture_filename: str=None,
+                           texture_uv_scaling_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.]],
+                           texture_xy_g_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
+                           texture_mapping_modes: List[str]=[
+                               'plane', 'cylinder', 'sphere', 'cube'],
+                           texture_position_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]],
+                           texture_orientation_ranges: List[List[float]]=[
+                               [0., 1.], [0., 1.], [0., 1.]]) -> None:
         """Randomize robot component property (i.e. color or texture).
 
         Visual elements that should be grouped together with the same
@@ -297,12 +307,29 @@ class RobotComponent(Object):
             be grouped together with the same property.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
-        :param color_components: A list of color components of the object to be
-            randomized.
+        :param color_components: A list of possible color components of the
+            object to be randomly selected from.
         :param color_rgb_ranges: A list of ranges within which the RGB color
             values should be uniformly sampled.
         :param texture_filename: A specific texture image file path for shape
             texture modification.
+        :param texture_uv_scaling_ranges: A list of ranges within which the UV
+            scaling values should be uniformly sampled from, those being 2
+            values that indicate the texture scaling factors along the U and V
+            directions.
+        :param texture_xy_g_ranges: A list of ranges within which the xy_g
+            texture creation values should be uniformly sampled from, those
+            being the texture x/y shift and the texture gamma-rotation.
+        :param texture_mapping_modes: A list of possible texture mapping modes
+            to be randomly selected from.
+        :param texture_position_ranges: A list of ranges within which the
+            texture position values should be uniformly sampled from, those
+            being the (x,y,z) values that indicate the texture position on the
+            shape.
+        :param texture_orientation_ranges: A list of ranges within which the
+            texture orientation values should be uniformly sampled from, those
+            being the Euler angles that indicate the texture orientation on the
+            shape.
         :param seed: A random seed to use for numpy's random number generator.
         """
         def find_group_seed(groups, group_seeds, name):
@@ -357,7 +384,12 @@ class RobotComponent(Object):
                     group_depth=_group_depth,
                     seed=seed,
                     search_strings=search_strings,
-                    filename=texture_filename)
+                    filename=texture_filename,
+                    uv_scaling_ranges=texture_uv_scaling_ranges,
+                    xy_g_ranges=texture_xy_g_ranges,
+                    mapping_modes=texture_mapping_modes,
+                    position_ranges=texture_position_ranges,
+                    orientation_ranges=texture_orientation_ranges)
             else:
                 raise(ValueError('Unknown robot component property: {}'
                                  .format(prop)))
@@ -367,13 +399,11 @@ class RobotComponent(Object):
                         seed: int=None,
                         groups: List[List[str]]=None,
                         search_strings=None,
-                        components: List[float]=['ambient_diffuse',
-                                                 'specular',
-                                                 'emission',
-                                                 'auxiliary'],
-                        rgb_ranges: List[List[float]]=[[0., 1.],
-                                                       [0., 1.],
-                                                       [0., 1.]]):
+                        components: List[str]=[
+                            'ambient_diffuse', 'specular',
+                            'emission', 'auxiliary'],
+                        rgb_ranges: List[List[float]]=[
+                            [0., 1.], [0., 1.], [0., 1.]]) -> None:
         """Randomize robot component color.
 
         Wrapper for RobotComponent.randomize_property() method.
@@ -386,8 +416,8 @@ class RobotComponent(Object):
             be grouped together with the same color.
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
-        :param components: A list of color components of the object to be
-            randomized.
+        :param components: A list of possible color components of the object to
+            be randomly selected from.
         :param rgb_ranges: A list of ranges within which the RGB color values
             should be uniformly sampled.
         """
@@ -404,7 +434,17 @@ class RobotComponent(Object):
                           seed: int=None,
                           groups: List[List[str]]=None,
                           search_strings=None,
-                          filename: str=None):
+                          filename: str=None,
+                          uv_scaling_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.]],
+                          xy_g_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.], [0., 1.]],
+                          mapping_modes: List[str]=[
+                              'plane', 'cylinder', 'sphere', 'cube'],
+                          position_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.], [0., 1.]],
+                          orientation_ranges: List[List[float]]=[
+                              [0., 1.], [0., 1.], [0., 1.]]) -> None:
         """Randomize robot component texture.
 
         Wrapper for RobotComponent.randomize_property() method.
@@ -418,13 +458,33 @@ class RobotComponent(Object):
         :param search_strings: A list of strings to search for to match shape
             elements that should be modified (e.g. 'visual' or 'visible').
         :param filename: A specific texture image file path to be used.
+        :param uv_scaling_ranges: A list of ranges within which the UV scaling
+            values should be uniformly sampled from, those being 2 values that
+            indicate the texture scaling factors along the U and V directions.
+        :param xy_g_ranges: A list of ranges within which the xy_g texture
+            creation values should be uniformly sampled from, those being the
+            texture x/y shift and the texture gamma-rotation.
+        :param mapping_modes: A list of possible texture mapping modes to be
+            randomly selected from.
+        :param position_ranges: A list of ranges within which the texture
+            position values should be uniformly sampled from, those being the
+            (x,y,z) values that indicate the texture position on the shape.
+        :param orientation_ranges: A list of ranges within which the texture
+            orientation values should be uniformly sampled from, those being
+            the Euler angles that indicate the texture orientation on the
+            shape.
         """
         self.randomize_property(prop='texture',
                                 group_depth=group_depth,
                                 seed=seed,
                                 groups=groups,
                                 search_strings=search_strings,
-                                texture_filename=filename)
+                                texture_filename=filename,
+                                texture_uv_scaling_ranges=uv_scaling_ranges,
+                                texture_xy_g_ranges=xy_g_ranges,
+                                texture_mapping_modes=mapping_modes,
+                                texture_position_ranges=position_ranges,
+                                texture_orientation_ranges=orientation_ranges)
 
     def _assert_len(self, inputs: list) -> None:
         if len(self.joints) != len(inputs):
