@@ -335,18 +335,28 @@ class PyRep(object):
                            orientation_ranges: List[float]=None,
                            position_sigmas: List[float]=[0.01, 0.01, 0.01],
                            orientation_sigmas: List[float]=[0.01, 0.01, 0.01],
-                           p_active: float=0.5):
+                           p_active: float=0.5,
+                           diffuse_part_ranges: List[float]=None,
+                           diffuse_part_sigmas: List[float]=[0.1, 0.1, 0.1],
+                           specular_part_ranges: List[float]=None,
+                           specular_part_sigmas: List[float]=[0.1, 0.1, 0.1]):
         # Get lights & store initial params
         if self._lights is None:
             self._lights = PyRep.get_lights()
 
         # Loop through lights & randomize
         for light in self._lights:
-            light.randomize(seed=seed,
-                            position_ranges=position_ranges,
-                            orientation_ranges=orientation_ranges,
-                            position_sigmas=position_sigmas,
-                            orientation_sigmas=orientation_sigmas,
-                            p_active=p_active)
+            light.randomize_position(seed=seed,
+                                     position_ranges=position_ranges,
+                                     position_sigmas=position_sigmas)
+            light.randomize_orientation(seed=seed,
+                                        orientation_ranges=orientation_ranges,
+                                        orientation_sigmas=orientation_sigmas)
+            light.randomize_params(seed=seed,
+                                   p_active=p_active,
+                                   diffuse_part_ranges=diffuse_part_ranges,
+                                   diffuse_part_sigmas=diffuse_part_sigmas,
+                                   specular_part_ranges=specular_part_ranges,
+                                   specular_part_sigmas=specular_part_sigmas)
             if seed is not None:
                 seed += 1

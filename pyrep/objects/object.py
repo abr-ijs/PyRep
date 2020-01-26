@@ -25,6 +25,9 @@ class Object(object):
                     'You requested object of type %s, but the actual type was '
                     '%s' % (assert_type.name, actual.name))
 
+        self._initial_position = self.get_position()
+        self._initial_orientation = self.get_orientation()
+
     def __eq__(self, other: 'Object'):
         return self.get_handle() == other.get_handle()
 
@@ -621,6 +624,57 @@ class Object(object):
         return sim.simCheckDistance(
             self.get_handle(), other.get_handle(), -1)[6]
 
+    def randomize_position(self,
+                           seed: int=None,
+                           position_ranges: List[float]=None,
+                           position_sigmas: List[float]=[0.01, 0.01, 0.01]):
+        # Seed the random number generator
+        if seed is not None:
+            np.random.seed(seed)
+
+        # Get current position or uniformly sample it
+        if position_ranges is None:
+            position = self._initial_position
+        else:
+            position_ranges = np.asarray(position_ranges)
+            position = list(np.random.uniform(position_ranges[:, 0],
+                                              position_ranges[:, 1],
+                                              len(position_ranges)))
+
+        # Add Gaussian noise to position
+        position = [
+            np.random.normal(position[0], position_sigmas[0], 1),
+            np.random.normal(position[1], position_sigmas[1], 1),
+            np.random.normal(position[2], position_sigmas[2], 1)]
+
+        # Set new position
+        self.set_position(position)
+
+    def randomize_orientation(self,
+                              seed: int=None,
+                              orientation_ranges: List[float]=None,
+                              orientation_sigmas: List[float]=[0.01, 0.01, 0.01]):
+        # Seed the random number generator
+        if seed is not None:
+            np.random.seed(seed)
+
+        # Get current orientation or uniformly sample it
+        if orientation_ranges is None:
+            orientation = self._initial_orientation
+        else:
+            orientation_ranges = np.asarray(orientation_ranges)
+            orientation = list(np.random.uniform(orientation_ranges[:, 0],
+                                                 orientation_ranges[:, 1],
+                                                 len(orientation_ranges)))
+
+        # Add Gaussian noise to orientation
+        orientation = [
+            np.random.normal(orientation[0], orientation_sigmas[0], 1),
+            np.random.normal(orientation[1], orientation_sigmas[1], 1),
+            np.random.normal(orientation[2], orientation_sigmas[2], 1)]
+
+        # Set new orientation
+        self.set_orientation(orientation)
 
 
     # === Private methods ===
