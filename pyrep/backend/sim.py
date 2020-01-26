@@ -336,6 +336,21 @@ def simSetObjectParent(objectHandle, parentObject, keepInPlace):
     _check_return(ret)
 
 
+def simGetLightParameters(objectHandle):
+    diffusePart = ffi.new('float[3]')
+    specularPart = ffi.new('float[3]')
+    state = lib.simGetLightParameters(objectHandle, ffi.NULL,
+                                      diffusePart, specularPart)
+    _check_return(state)
+    return state, list(diffusePart), list(specularPart)
+
+
+def simSetLightParameters(objectHandle, state, diffusePart, specularPart):
+    ret = lib.simSetLightParameters(objectHandle, state, ffi.NULL,
+                                    diffusePart, specularPart)
+    _check_return(ret)
+
+
 def simGetArrayParameter(paramIdentifier):
     paramValues = ffi.new('float[3]')
     ret = lib.simGetArrayParameter(paramIdentifier, paramValues)
