@@ -35,6 +35,8 @@ class PyRep(object):
 
         self._handles_to_objects = {}
 
+        self._lights = None
+
         if 'COPPELIASIM_ROOT' not in os.environ:
             raise PyRepError(
                 'COPPELIASIM_ROOT not defined. See installation instructions.')
@@ -316,7 +318,7 @@ class PyRep(object):
     @staticmethod
     def get_lights(search_strings: List[str]=['light',
                                               'Light']) -> List[Object]:
-        """Gets a list of the lights in the scene.
+        """Retrieves the lights in the current scene.
 
         :param search_strings: A list of strings to search for in robot
             elements that identify them as lights.
@@ -326,3 +328,25 @@ class PyRep(object):
         return [Light(obj.get_handle()) for obj in objects if
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
+
+    def randomize_lighting(self,
+                           seed: int=None,
+                           position_ranges: List[float]=None,
+                           orientation_ranges: List[float]=None,
+                           position_sigmas: List[float]=[0.01, 0.01, 0.01],
+                           orientation_sigmas: List[float]=[0.01, 0.01, 0.01],
+                           p_active: float=0.5):
+        # Get lights & store initial params
+        if self._lights is None:
+            self._lights = PyRep.get_lights()
+
+        # Loop through lights & randomize
+        for light in self._lights:
+            light.randomize(seed=seed,
+                            position_ranges=position_ranges,
+                            orientation_ranges=orientation_ranges,
+                            position_sigmas=position_sigmas,
+                            orientation_sigmas=orientation_sigmas,
+                            p_active=p_active)
+            if seed is not None:
+                seed += 1
