@@ -1,3 +1,4 @@
+import pyrep
 from pyrep.backend import sim, utils
 from pyrep.errors import *
 from pyrep.const import ObjectType
@@ -626,55 +627,117 @@ class Object(object):
 
     def randomize_position(self,
                            seed: int=None,
-                           position_ranges: List[float]=None,
-                           position_sigmas: List[float]=[0.01, 0.01, 0.01]):
+                           ranges: List[List[float]]=None,
+                           mean: List[float]=None,
+                           cov: [List[float], List[List[float]]]=None):
+        """Randomize and set object position.
+
+        The position may be either:
+        (a) uniformly sampled within specified [low, high] ranges
+            (e.g. ranges=[[0., 1.], [0., 1.], [0., 1.]], mean=None, cov=None),
+        (b) sampled from the normal distribution
+            (e.g. ranges=None, mean=[0.5, 0.5, 0.5],
+            cov=[0.001, 0.001, 0.001]),
+        (c) specified as the initial object position, then perturbed with
+            Gaussian noise (e.g. ranges=None, mean=None,
+            cov=[0.001, 0.001, 0.001]), or
+        (d) uniformly sampled within specified ranges, then perturbed with
+            Gaussian noise (e.g. ranges=[[0., 1.], [0., 1.], [0., 1.]],
+            mean=None, cov=[0.001, 0.001, 0.001]).
+
+        :param ranges: A 3x2 matrix of values specifying [low, high]
+            ranges from which each of the (x,y,z) object position values should
+            be uniformly sampled. If set to None, the initial object position
+            will be used.
+        :param mean: A list of 3 values specifying the mean (x,y,z) position
+            for Gaussian sampling. If set to None, the initial object position
+            will be used.
+        :param cov: Either a 3-vector of values specifying the diagonal of the
+            covariance matrix for the Gaussian sampling calculation, or a 3x3
+            matrix specifying the entire matrix. If set to None, Gaussian
+            sampling will not be used.
+        :return: The new position.
+        """
+        # Input validation
+        assert(ranges is None or np.asarray(ranges).shape == (3, 2))
+        assert(mean is None or np.asarray(mean).shape == (3,))
+        assert(cov is None or np.asarray(cov).shape == (3,) or
+               np.asarray(cov).shape == (3, 3))
+        assert(not (ranges is None and mean is None and cov is None))
+
         # Seed the random number generator
         if seed is not None:
             np.random.seed(seed)
 
-        # Get current position or uniformly sample it
-        if position_ranges is None:
-            position = self._initial_position
-        else:
-            position_ranges = np.asarray(position_ranges)
-            position = list(np.random.uniform(position_ranges[:, 0],
-                                              position_ranges[:, 1],
-                                              len(position_ranges)))
+        # Decide whether or not to use the initial object position
+        if ranges is None and mean is None:
+            mean = self._initial_position
 
-        # Add Gaussian noise to position
-        position = [
-            np.random.normal(position[0], position_sigmas[0], 1),
-            np.random.normal(position[1], position_sigmas[1], 1),
-            np.random.normal(position[2], position_sigmas[2], 1)]
+        # Sample
+        position = pyrep.PyRep.random_sample(seed=seed, ranges=ranges,
+                                             mean=mean, cov=cov)
 
         # Set new position
-        self.set_position(position)
+        self.set_position(list(position))
+
+        return position
 
     def randomize_orientation(self,
                               seed: int=None,
-                              orientation_ranges: List[float]=None,
-                              orientation_sigmas: List[float]=[0.01, 0.01, 0.01]):
+                              ranges: List[List[float]]=None,
+                              mean: List[float]=None,
+                              cov: [List[float], List[List[float]]]=None):
+        """Randomize and set object orientation.
+
+        The orientation may be either:
+        (a) uniformly sampled within specified [low, high] ranges
+            (e.g. ranges=[[0., 1.], [0., 1.], [0., 1.]], mean=None, cov=None),
+        (b) sampled from the normal distribution
+            (e.g. ranges=None, mean=[0.5, 0.5, 0.5],
+            cov=[0.001, 0.001, 0.001]),
+        (c) specified as the initial object orientation, then perturbed with
+            Gaussian noise (e.g. ranges=None, mean=None,
+            cov=[0.001, 0.001, 0.001]), or
+        (d) uniformly sampled within specified ranges, then perturbed with
+            Gaussian noise (e.g. ranges=[[0., 1.], [0., 1.], [0., 1.]],
+            mean=None, cov=[0.001, 0.001, 0.001]).
+
+        :param ranges: A 3x2 matrix of values specifying [low, high] ranges
+            from which each of the object orientation Euler angle values should
+            be uniformly sampled. If set to None, the initial object
+            orientation will be used.
+        :param mean: A list of 3 values specifying the mean Euler angle
+            orientation values for Gaussian sampling. If set to None, the
+            initial object orientation will be used.
+        :param cov: Either a 3-vector of values specifying the diagonal of the
+            covariance matrix for the Gaussian sampling calculation, or a 3x3
+            matrix specifying the entire matrix. If set to None, Gaussian
+            sampling will not be used.
+        :return: The new orientation.
+        """
+        # Input validation
+        assert(ranges is None or np.asarray(ranges).shape == (3, 2))
+        assert(mean is None or np.asarray(mean).shape == (3,))
+        assert(cov is None or np.asarray(cov).shape == (3,) or
+               np.asarray(cov).shape == (3, 3))
+        assert(not (ranges is None and mean is None and cov is None))
+
         # Seed the random number generator
         if seed is not None:
             np.random.seed(seed)
 
-        # Get current orientation or uniformly sample it
-        if orientation_ranges is None:
-            orientation = self._initial_orientation
-        else:
-            orientation_ranges = np.asarray(orientation_ranges)
-            orientation = list(np.random.uniform(orientation_ranges[:, 0],
-                                                 orientation_ranges[:, 1],
-                                                 len(orientation_ranges)))
+        # Decide whether or not to use the initial object orientation
+        if ranges is None and mean is None:
+            mean = self._initial_orientation
 
-        # Add Gaussian noise to orientation
-        orientation = [
-            np.random.normal(orientation[0], orientation_sigmas[0], 1),
-            np.random.normal(orientation[1], orientation_sigmas[1], 1),
-            np.random.normal(orientation[2], orientation_sigmas[2], 1)]
+        # Sample
+        orientation = pyrep.PyRep.random_sample(seed=seed, ranges=ranges,
+                                                mean=mean, cov=cov)
 
         # Set new orientation
-        self.set_orientation(orientation)
+        self.set_orientation(list(orientation))
+
+        return orientation
 
 
     # === Private methods ===

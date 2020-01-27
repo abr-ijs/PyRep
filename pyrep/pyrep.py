@@ -11,6 +11,7 @@ import time
 import threading
 from threading import Lock
 from typing import Tuple, List
+import numpy as np
 
 
 class PyRep(object):
@@ -329,17 +330,92 @@ class PyRep(object):
                 search_strings is None or
                 any([string in obj.get_name() for string in search_strings])]
 
+    @staticmethod
+    def random_sample(seed: int=None,
+                      ranges: List[List[float]]=None,
+                      mean: List[float]=None,
+                      cov: [List[float], List[List[float]]]=None):
+        """Randomly sample a vector using uniform and/or Gaussian sampling.
+
+        The vector may be either:
+        (a) uniformly sampled within specified [low, high] ranges
+            (e.g. for a 3-vector, ranges=[[0., 1.], [0., 1.], [0., 1.]],
+            mean=None, cov=None),
+        (b) sampled from the normal distribution
+            (e.g. for a 3-vector, ranges=None, mean=[0.5, 0.5, 0.5],
+            cov=[0.001, 0.001, 0.001]),
+        (c) uniformly sampled within specified ranges, then perturbed with
+            Gaussian noise (e.g. for a 3-vector,
+            ranges=[[0., 1.], [0., 1.], [0., 1.]], mean=None,
+            cov=[0.001, 0.001, 0.001]).
+
+        :param ranges: An Nx2 matrix of values specifying [low, high] ranges
+            from which each of the vector elements should be uniformly sampled.
+            If set to None, uniform sampling will not be used.
+        :param mean: A list of N values specifying the mean N-vector
+            for Gaussian sampling. If set to None, the uniformly-sampled vector
+            will be used.
+        :param cov: Either a 1xN list of values specifying the diagonal of the
+            covariance matrix for the Gaussian sampling calculation, or an NxN
+            matrix specifying the entire matrix. If set to None, Gaussian
+            sampling will not be used.
+        :return: The randomly sampled vector.
+        """
+        # Seed the random number generator
+        if seed is not None:
+            np.random.seed(seed)
+
+        # Uniform sampling
+        if ranges is None:
+            sample = None
+        else:
+            ranges = np.asarray(ranges)
+            sample = list(np.random.uniform(ranges[:, 0],
+                                            ranges[:, 1],
+                                            len(ranges)))
+
+        # Gaussian sampling
+        if cov is not None:
+            # Expand cov diagonal values
+            cov = np.asarray(cov)
+            if len(cov.shape) == 1:
+                cov = np.diag(cov)
+
+            # Set the mean to either the specified mean or the
+            # initial/uniformly sampled object position.
+            if mean is None:
+                mean = sample
+
+            # Sample
+            sample = np.random.multivariate_normal(mean, cov)
+
+        return sample
+
     def randomize_lighting(self,
                            seed: int=None,
-                           position_ranges: List[float]=None,
-                           orientation_ranges: List[float]=None,
-                           position_sigmas: List[float]=[0.01, 0.01, 0.01],
-                           orientation_sigmas: List[float]=[0.01, 0.01, 0.01],
+                           position_ranges: [List[List[float]]]=None,
+                           position_mean: List[float]=None,
+                           position_cov: [List[float], List[List[float]]]=
+                           [0.0001, 0.0001, 0.0001],
+                           orientation_ranges: [List[List[float]]]=None,
+                           orientation_mean: List[float]=None,
+                           orientation_cov: [List[float], List[List[float]]]=
+                           [0.0001, 0.0001, 0.0001],
                            p_active: float=0.5,
-                           diffuse_part_ranges: List[float]=None,
-                           diffuse_part_sigmas: List[float]=[0.1, 0.1, 0.1],
-                           specular_part_ranges: List[float]=None,
-                           specular_part_sigmas: List[float]=[0.1, 0.1, 0.1]):
+                           diffuse_part_ranges: List[List[float]]=None,
+                           diffuse_part_mean: List[float]=None,
+                           diffuse_part_cov: [List[float], List[List[float]]]
+                           =[0.0001, 0.0001, 0.0001],
+                           specular_part_ranges: List[List[float]]=None,
+                           specular_part_mean: List[float]=None,
+                           specular_part_cov: [List[float], List[List[float]]]
+                           =[0.0001, 0.0001, 0.0001]):
+        """Randomize position, orientation & parameters of all lights in scene.
+
+        See documentation for Object.randomize_position(),
+        Object.randomize_orientation() and Light.randomize_params() for
+        argument descriptions.
+        """
         # Get lights & store initial params
         if self._lights is None:
             self._lights = PyRep.get_lights()
@@ -347,16 +423,20 @@ class PyRep(object):
         # Loop through lights & randomize
         for light in self._lights:
             light.randomize_position(seed=seed,
-                                     position_ranges=position_ranges,
-                                     position_sigmas=position_sigmas)
+                                     ranges=position_ranges,
+                                     mean=position_mean,
+                                     cov=position_cov)
             light.randomize_orientation(seed=seed,
-                                        orientation_ranges=orientation_ranges,
-                                        orientation_sigmas=orientation_sigmas)
+                                        ranges=orientation_ranges,
+                                        mean=orientation_mean,
+                                        cov=orientation_cov)
             light.randomize_params(seed=seed,
                                    p_active=p_active,
                                    diffuse_part_ranges=diffuse_part_ranges,
-                                   diffuse_part_sigmas=diffuse_part_sigmas,
+                                   diffuse_part_mean=diffuse_part_mean,
+                                   diffuse_part_cov=diffuse_part_cov,
                                    specular_part_ranges=specular_part_ranges,
-                                   specular_part_sigmas=specular_part_sigmas)
+                                   specular_part_mean=specular_part_mean,
+                                   specular_part_cov=specular_part_cov)
             if seed is not None:
                 seed += 1
