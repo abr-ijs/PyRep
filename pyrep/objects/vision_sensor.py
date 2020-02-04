@@ -1,7 +1,7 @@
 import math
 from typing import List, Union
 from pyrep.backend import sim
-from pyrep.objects.object import Object
+from pyrep.objects.object import Object, object_type_to_class
 import numpy as np
 from pyrep.const import ObjectType, PerspectiveMode, RenderMode
 
@@ -149,7 +149,7 @@ class VisionSensor(Object):
         :return: The current PerspectiveMode.
         """
         perspective_mode = sim.simGetObjectInt32Parameter(
-            self._handle, sim.sim_visionintparam_perspective_mode
+            self._handle, sim.sim_visionintparam_perspective_operation,
         )
         return PerspectiveMode(perspective_mode)
 
@@ -161,7 +161,7 @@ class VisionSensor(Object):
             PerspectiveMode.PERSPECTIVE
         """
         sim.simSetObjectInt32Parameter(
-            self._handle, sim.sim_visionintparam_perspective_mode,
+            self._handle, sim.sim_visionintparam_perspective_operation,
             perspective_mode.value
         )
 
@@ -265,3 +265,6 @@ class VisionSensor(Object):
         sim.simSetObjectFloatParameter(
             self._handle, sim.sim_visionfloatparam_far_clipping, far_clipping
         )
+
+
+object_type_to_class[ObjectType.VISION_SENSOR] = VisionSensor

@@ -142,8 +142,12 @@ class TestObjects(TestCore):
 
     def test_get_objects_in_tree(self):
         dummys = [Dummy('nested_dummy%d' % i) for i in range(3)]
-        self.assertListEqual(dummys[0].get_objects_in_tree(
-            exclude_base=False, first_generation_only=False), dummys)
+
+        objects = dummys[0].get_objects_in_tree(
+            exclude_base=False, first_generation_only=False)
+        self.assertListEqual(objects, dummys)
+        for obj in objects:
+            self.assertIs(type(obj), Dummy)
 
         self.assertListEqual(
             dummys[0].get_objects_in_tree(
@@ -218,6 +222,11 @@ class TestObjects(TestCore):
     def test_check_distance(self):
         dist = self.dummy.check_distance(self.cube0)
         self.assertAlmostEqual(dist, 1.4629, places=3)
+
+    def test_set_get_bullet_friction(self):
+        self.dynamic_cube.set_bullet_friction(0.7)
+        friction = self.dynamic_cube.get_bullet_friction()
+        self.assertAlmostEqual(friction, 0.7, places=1)
 
 
 if __name__ == '__main__':

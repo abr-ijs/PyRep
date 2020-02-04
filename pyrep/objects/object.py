@@ -8,6 +8,9 @@ from typing import List, Tuple, Union
 import numpy as np
 
 
+object_type_to_class = {}
+
+
 class Object(object):
     """Base class for V-REP scene objects that are used for building a scene.
 
@@ -220,6 +223,14 @@ class Object(object):
         assert len(pose) == 7
         self.set_position(pose[:3], relative_to, reset_dynamics)
         self.set_quaternion(pose[3:], relative_to, reset_dynamics)
+
+    def get_velocity(self) -> Tuple[List[float], List[float]]:
+        """Get the velocity of this object.
+
+        :return: A pair of linear and angular velocity.
+        """
+        linear_vel, angular_vel = sim.simGetObjectVelocity(self._handle)
+        return linear_vel, angular_vel
 
     def get_parent(self) -> Union['Object', None]:
         """Gets the parent of this object in the scene hierarchy.
@@ -603,7 +614,9 @@ class Object(object):
             self._handle, object_type.value, options)
         objects = []
         for h in handles:
-            objects.append(Object(h))
+            object_type = ObjectType(sim.simGetObjectType(h))
+            cls = object_type_to_class.get(object_type, Object)
+            objects.append(cls(h))
         return objects
 
     def copy(self) -> 'Object':
@@ -624,6 +637,22 @@ class Object(object):
         """
         return sim.simCheckDistance(
             self.get_handle(), other.get_handle(), -1)[6]
+
+    def get_bullet_friction(self) -> float:
+        """Get bullet friction parameter.
+
+        :return: The friction.
+        """
+        return sim.simGetEngineFloatParameter(sim.sim_bullet_body_friction,
+                                              self._handle)
+
+    def set_bullet_friction(self, friction) -> None:
+        """Set bullet friction parameter.
+
+        :param friction: The friction to set.
+        """
+        sim.simSetEngineFloatParameter(sim.sim_bullet_body_friction,
+                                       self._handle, friction)
 
     def randomize_position(self,
                            seed: int=None,
@@ -739,13 +768,12 @@ class Object(object):
 
         return orientation
 
-
     # === Private methods ===
-
     def _check_model(self) -> None:
         if not self.is_model():
             raise ObjectIsNotModelError(
-                "Object '%s' is not a model. Use 'set_model(True)' to convert.")
+                "Object '%s' is not a model."
+                "Use 'set_model(True)' to convert.")
 
     def _get_model_property(self, prop_type: int) -> bool:
         current = sim.simGetModelProperty(self._handle)

@@ -1,6 +1,25 @@
 from .simConst import *
 from ._sim_cffi import ffi, lib
 import numpy as np
+import collections
+
+
+SShapeVizInfo = collections.namedtuple(
+    'SShapeVizInfo',
+    [
+        'vertices',
+        'indices',
+        'normals',
+        'shadingAngle',
+        'colors',
+        'texture',
+        'textureId',
+        'textureRes',
+        'textureCoords',
+        'textureApplyMode',
+        'textureOptions',
+    ],
+)
 
 
 def _check_return(ret):
@@ -402,6 +421,20 @@ def simGetStringParameter(parameter):
     sval = ffi.string(val).decode('utf-8')
     simReleaseBuffer(val)
     return sval
+
+
+def simGetEngineFloatParameter(parameter, objectHandle):
+    ok = ffi.new('unsigned char *')
+    ret = lib.simGetEngineFloatParameter(parameter, objectHandle, ffi.NULL, ok)
+    _check_return(ret)
+    return ret
+
+
+def simSetEngineFloatParameter(parameter, objectHandle, val):
+    ret = lib.simSetEngineFloatParameter(parameter, objectHandle, ffi.NULL,
+                                         val)
+    _check_return(ret)
+    return ret
 
 
 def simGetCollisionHandle(collisionObjectName):
@@ -896,6 +929,41 @@ def simGetShapeMesh(shapeHandle):
     return retVerticies, retIndices, outNormals
 
 
+def simGetShapeViz(shapeHandle, index):
+    info = ffi.new('struct SShapeVizInfo *')
+    ret = lib.simGetShapeViz(shapeHandle, index, info)
+    _check_return(ret)
+
+    vertices = [info.vertices[i] for i in range(info.verticesSize)]
+    indices = [info.indices[i] for i in range(info.indicesSize)]
+    normals = [info.normals[i] for i in range(info.indicesSize * 3)]
+    colors = list(info.colors)
+    textureSize = info.textureRes[0] * info.textureRes[1] * 4
+    if textureSize == 0:
+        texture = []
+        textureCoords = []
+    else:
+        texture = np.frombuffer(
+            ffi.buffer(info.texture, textureSize), np.uint8)
+        texture = texture.tolist()
+        textureCoords = [info.textureCoords[i] for i in
+                        range(info.indicesSize * 2)]
+
+    return SShapeVizInfo(
+        vertices=vertices,
+        indices=indices,
+        normals=normals,
+        shadingAngle=info.shadingAngle,
+        colors=colors,
+        texture=texture,
+        textureId=info.textureId,
+        textureRes=info.textureRes,
+        textureCoords=textureCoords,
+        textureApplyMode=info.textureApplyMode,
+        textureOptions=info.textureOptions,
+    )
+
+
 def simConvexDecompose(shapeHandle, options, intParams, floatParams):
     return lib.simConvexDecompose(shapeHandle, options, intParams, floatParams)
 
@@ -945,10 +1013,12 @@ def simGetScriptAssociatedWithObject(objectHandle):
     ret = lib.simGetScriptAssociatedWithObject(objectHandle)
     return ret
 
+
 def simReadTexture(textureId, options, posX=0, posY=0, sizeX=0, sizeY=0):
     ret = lib.simReadTexture(textureId, options, posX, posY, sizeX, sizeY)
     _check_null_return(ret)
     return ret
+
 
 def simWriteTexture(textureId, options, textureData,
                     posX=0, posY=0, sizeX=0, sizeY=0, interpolation=0):
@@ -956,6 +1026,15 @@ def simWriteTexture(textureId, options, textureData,
                               posX, posY, sizeX, sizeY, interpolation)
     _check_return(ret)
     return ret
+
+
+def simApplyTexture(shapeHandle, textureCoordinates, textCoordSize,
+                    texture, textureResolution, options):
+    ret = lib.simApplyTexture(shapeHandle, textureCoordinates, textCoordSize,
+                              texture, textureResolution, options)
+    _check_return(ret)
+    return ret
+
 
 def simCreateTexture(fileName, options, planeSizes, scalingUV, xy_g,
                      fixedResolution, resolution):
