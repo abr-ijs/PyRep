@@ -7,6 +7,7 @@ from pyrep.objects.object import Object
 from pyrep.objects.joint import Joint
 from pyrep.const import ObjectType, JointMode
 import numpy as np
+import time
 
 
 class RobotComponent(Object):
@@ -342,14 +343,14 @@ class RobotComponent(Object):
         # Set up grouping/seeding
         if group_depth is not None and group_depth <= 0:
             if seed is None:
-                seed = np.random.randint(2**32 - 1)
+                seed = int(time.time())
         group_seeds = []
         if groups is not None and seed is not None:
             for _ in groups:
                 group_seeds.append(seed)
                 seed += 1
         elif groups is not None and seed is None:
-            _seed = np.random.randint(2**32 - 1)
+            _seed = int(time.time())
             for _ in groups:
                 group_seeds.append(_seed)
                 _seed += 1
@@ -364,7 +365,7 @@ class RobotComponent(Object):
                                            element.get_name())
                 except Exception:
                     if seed is None:
-                        seed = np.random.randint(2**32 - 1)
+                        seed = int(time.time())
                     else:
                         seed += 1
             # Randomize the visual element

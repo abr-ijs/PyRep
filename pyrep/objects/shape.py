@@ -7,6 +7,7 @@ from pyrep.const import ObjectType, PrimitiveShape, TextureMappingMode
 from pyrep.textures.texture import Texture
 import os
 import re
+import time
 import numpy as np
 import collections
 
@@ -511,7 +512,7 @@ class Shape(Object):
         # Sample
         rgb_ranges = np.asarray(rgb_ranges)
         color = list(np.random.uniform(rgb_ranges[:, 0], rgb_ranges[:, 1],
-                                  len(rgb_ranges)))
+                                       len(rgb_ranges)))
 
         # Set the color components of the shape
         for component in components:
@@ -702,7 +703,7 @@ class Shape(Object):
             # Set up the grouping/seeding
             if group_depth is not None and group_depth <= depth:
                 if seed is None:
-                    seed = np.random.randint(2**32 - 1)
+                    seed = int(time.time())
             # The un-group call is inconsistent, so we need to sort the shapes
             # list for consistent results with specified seeds.
             shape_handles = [shape.get_name() for shape in shapes]
@@ -714,7 +715,7 @@ class Shape(Object):
                 # Handle the grouping/seeding
                 if group_depth is not None and group_depth > depth:
                     if seed is None:
-                        seed = np.random.randint(2**32 - 1)
+                        seed = int(time.time())
                     else:
                         seed += 1
                 # Recurse to the next depth level
