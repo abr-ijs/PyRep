@@ -1,14 +1,13 @@
 import pyrep
-from pyrep.backend import sim, utils
+from pyrep.backend import sim
 from pyrep.errors import *
 from pyrep.const import ObjectType
 from pyrep.errors import WrongObjectTypeError
-from pyrep.const import PYREP_SCRIPT_TYPE
-from typing import List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 
 
-object_type_to_class = {}
+object_type_to_class: Dict[ObjectType, Any] = {}
 
 
 class Object(object):
@@ -29,10 +28,9 @@ class Object(object):
                     'You requested object of type %s, but the actual type was '
                     '%s' % (assert_type.name, actual.name))
 
-        self._initial_position = self.get_position()
-        self._initial_orientation = self.get_orientation()
-
-    def __eq__(self, other: 'Object'):
+    def __eq__(self, other: object):
+        if not isinstance(other, Object):
+            raise NotImplementedError
         return self.get_handle() == other.get_handle()
 
     @staticmethod
@@ -98,18 +96,19 @@ class Object(object):
         """
         sim.simSetObjectName(self._handle, name)
 
-    def get_position(self, relative_to=None) -> List[float]:
+    def get_position(self, relative_to=None) -> np.ndarray:
         """Gets the position of this object.
 
         :param relative_to: Indicates relative to which reference frame we want
             the position. Specify None to retrieve the absolute position, or an
             Object relative to whose reference frame we want the position.
-        :return: A list containing the x, y, z position of the object.
+        :return: An array containing the x, y, z position of the object.
         """
         relto = -1 if relative_to is None else relative_to.get_handle()
-        return sim.simGetObjectPosition(self._handle, relto)
+        position = sim.simGetObjectPosition(self._handle, relto)
+        return np.array(position, dtype=np.float64)
 
-    def set_position(self, position: List[float], relative_to=None,
+    def set_position(self, position: Union[list, np.ndarray], relative_to=None,
                      reset_dynamics=True) -> None:
         """Sets the position of this object.
 
@@ -126,9 +125,9 @@ class Object(object):
             for ob in self.get_objects_in_tree(exclude_base=False):
                 ob.reset_dynamic_object()
 
-        sim.simSetObjectPosition(self._handle, relto, position)
+        sim.simSetObjectPosition(self._handle, relto, list(position))
 
-    def get_orientation(self, relative_to=None) -> List[float]:
+    def get_orientation(self, relative_to=None) -> np.ndarray:
         """Gets the orientation of this object.
 
         :param relative_to: Indicates relative to which reference frame we want
@@ -139,13 +138,14 @@ class Object(object):
             object (in radians).
         """
         relto = -1 if relative_to is None else relative_to.get_handle()
-        return sim.simGetObjectOrientation(self._handle, relto)
+        orientation = sim.simGetObjectOrientation(self._handle, relto)
+        return np.array(orientation, dtype=np.float64)
 
-    def set_orientation(self, orientation: List[float], relative_to=None,
-                        reset_dynamics=True) -> None:
+    def set_orientation(self, orientation: Union[list, np.ndarray],
+                        relative_to=None, reset_dynamics=True) -> None:
         """Sets the orientation of this object.
 
-        :param orientation: A list containing the x, y, z orientation of
+        :param orientation: An array containing the x, y, z orientation of
             the object (in radians).
         :param relative_to: Indicates relative to which reference frame the
             the orientation is specified. Specify None to set the absolute
@@ -158,9 +158,9 @@ class Object(object):
         if reset_dynamics:
             for ob in self.get_objects_in_tree(exclude_base=False):
                 ob.reset_dynamic_object()
-        sim.simSetObjectOrientation(self._handle, relto, orientation)
+        sim.simSetObjectOrientation(self._handle, relto, list(orientation))
 
-    def get_quaternion(self, relative_to=None) -> List[float]:
+    def get_quaternion(self, relative_to=None) -> np.ndarray:
         """Retrieves the quaternion (x,y,z,w) of an object.
 
         :param relative_to: Indicates relative to which reference frame we want
@@ -170,15 +170,16 @@ class Object(object):
         :return: A list containing the quaternion (x,y,z,w).
         """
         relto = -1 if relative_to is None else relative_to.get_handle()
-        return sim.simGetObjectQuaternion(self._handle, relto)
+        quaternion = sim.simGetObjectQuaternion(self._handle, relto)
+        return np.array(quaternion, dtype=np.float64)
 
-    def set_quaternion(self, quaternion: List[float], relative_to=None,
-                       reset_dynamics=True) -> None:
+    def set_quaternion(self, quaternion: Union[list, np.ndarray],
+                       relative_to=None, reset_dynamics=True) -> None:
         """Sets the orientation of this object.
 
         If the quaternion is not normalised, it will be normalised for you.
 
-        :param quaternion: A list containing the quaternion (x,y,z,w).
+        :param quaternion: An array containing the quaternion (x,y,z,w).
         :param relative_to: Indicates relative to which reference frame the
             the orientation is specified. Specify None to set the absolute
             orientation, or an Object relative to whose reference frame the
@@ -187,32 +188,34 @@ class Object(object):
             an object instantaneously.
         """
         assert len(quaternion) == 4
+        quaternion = np.asarray(quaternion)
         norm = np.linalg.norm(quaternion)
         if norm != 1.0:
-            quaternion = list(np.array(quaternion) / norm)
+            quaternion = quaternion / norm
         relto = -1 if relative_to is None else relative_to.get_handle()
         if reset_dynamics:
             for ob in self.get_objects_in_tree(exclude_base=False):
                 ob.reset_dynamic_object()
-        sim.simSetObjectQuaternion(self._handle, relto, quaternion)
+        sim.simSetObjectQuaternion(self._handle, relto, list(quaternion))
 
-    def get_pose(self, relative_to=None) -> List[float]:
+    def get_pose(self, relative_to=None) -> np.ndarray:
         """Retrieves the position and quaternion of an object
 
         :param relative_to: Indicates relative to which reference frame we want
             the pose. Specify None to retrieve the absolute pose, or an Object
             relative to whose reference frame we want the pose.
-        :return: A list containing the (X,Y,Z,Qx,Qy,Qz,Qw) pose of the object.
+        :return: An array containing the (X,Y,Z,Qx,Qy,Qz,Qw) pose of
+            the object.
         """
-        p = self.get_position(relative_to)
-        o = self.get_quaternion(relative_to)
-        return p + o
+        position = self.get_position(relative_to)
+        quaternion = self.get_quaternion(relative_to)
+        return np.r_[position, quaternion]
 
-    def set_pose(self, pose: List[float], relative_to=None,
+    def set_pose(self, pose: Union[list, np.ndarray], relative_to=None,
                  reset_dynamics=True) -> None:
         """Sets the position and quaternion of an object.
 
-        :param pose: A list containing the (X,Y,Z,Qx,Qy,Qz,Qw) pose of
+        :param pose: An array containing the (X,Y,Z,Qx,Qy,Qz,Qw) pose of
             the object.
         :param relative_to: Indicates relative to which reference frame the
             the pose is specified. Specify None to set the absolute pose, or an
@@ -224,12 +227,14 @@ class Object(object):
         self.set_position(pose[:3], relative_to, reset_dynamics)
         self.set_quaternion(pose[3:], relative_to, reset_dynamics)
 
-    def get_velocity(self) -> Tuple[List[float], List[float]]:
+    def get_velocity(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get the velocity of this object.
 
         :return: A pair of linear and angular velocity.
         """
         linear_vel, angular_vel = sim.simGetObjectVelocity(self._handle)
+        linear_vel = np.array(linear_vel, dtype=np.float64)
+        angular_vel = np.array(angular_vel, dtype=np.float64)
         return linear_vel, angular_vel
 
     def get_parent(self) -> Union['Object', None]:
@@ -653,6 +658,20 @@ class Object(object):
         """
         sim.simSetEngineFloatParameter(sim.sim_bullet_body_friction,
                                        self._handle, friction)
+
+    def get_explicit_handling(self) -> int:
+        """Get explicit handling flags.
+
+        :return: The flag: enabled(1) or disabled(0).
+        """
+        return sim.simGetExplicitHandling(self._handle)
+
+    def set_explicit_handling(self, value: int) -> None:
+        """Set explicit handling flags.
+
+        :param value: A flag to enable(1) or disable(0) explicit handling.
+        """
+        sim.simSetExplicitHandling(self._handle, value)
 
     def randomize_position(self,
                            seed: int=None,

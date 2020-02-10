@@ -2,7 +2,7 @@ from pyrep.backend import sim
 from pyrep.robots.configuration_paths.configuration_path import (
     ConfigurationPath)
 import numpy as np
-from typing import List
+from typing import List, Optional
 
 
 class ArmConfigurationPath(ConfigurationPath):
@@ -17,10 +17,10 @@ class ArmConfigurationPath(ConfigurationPath):
     control systems.
     """
 
-    def __init__(self, arm: 'Arm', path_points: List[float]):
+    def __init__(self, arm: 'Arm', path_points: List[float]):  # type: ignore
         self._arm = arm
         self._path_points = np.array(path_points)
-        self._rml_handle = None
+        self._rml_handle: Optional[int] = None
         self._drawing_handle = None
         self._path_done = False
         self._num_joints = arm.get_joint_count()
@@ -82,13 +82,13 @@ class ArmConfigurationPath(ConfigurationPath):
         init_angles = self._arm.get_joint_positions()
         self._arm.set_joint_positions(
             self._path_points[0: len(self._arm.joints)], allow_force_mode=False)
-        prev_point = tip.get_position()
+        prev_point = list(tip.get_position())
 
         for i in range(len(self._arm.joints), len(self._path_points),
                        len(self._arm.joints)):
             points = self._path_points[i:i + len(self._arm.joints)]
             self._arm.set_joint_positions(points, allow_force_mode=False)
-            p = tip.get_position()
+            p = list(tip.get_position())
             sim.simAddDrawingObjectItem(self._drawing_handle, prev_point + p)
             prev_point = p
 
@@ -181,7 +181,7 @@ class ArmConfigurationPath(ConfigurationPath):
     def _get_path_point_lengths(self) -> List[float]:
         path_points = self._path_points
         prev_points = path_points[0:len(self._arm.joints)]
-        dists = [0]
+        dists = [0.]
         d = 0
         for i in range(len(self._arm.joints), len(self._path_points),
                        len(self._arm.joints)):

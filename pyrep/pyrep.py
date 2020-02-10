@@ -181,7 +181,7 @@ class PyRep(object):
             sim.simStopSimulation()
             self.running = False
             # Need this so the UI updates
-            [self.step() for _ in range(5)]
+            [self.step() for _ in range(5)]  # type: ignore
 
     def step(self) -> None:
         """Execute the next simulation step.
