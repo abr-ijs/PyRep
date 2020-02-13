@@ -28,6 +28,9 @@ class Object(object):
                     'You requested object of type %s, but the actual type was '
                     '%s' % (assert_type.name, actual.name))
 
+        self._initial_position = self.get_position()
+        self._initial_orientation = self.get_orientation()
+
     def __eq__(self, other: object):
         if not isinstance(other, Object):
             raise NotImplementedError
