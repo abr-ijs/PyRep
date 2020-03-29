@@ -20,6 +20,29 @@ class TestObjects(TestCore):
         self.dummy = Dummy('dummy')
         self.simple_model = Shape('simple_model')
 
+    def test_get_object_type(self):
+        self.assertEqual(Object.get_object_type('dynamic_cube'),
+                         ObjectType.SHAPE)
+        self.assertEqual(Object.get_object_type('dummy'),
+                         ObjectType.DUMMY)
+
+    def test_get_object_name(self):
+        self.assertEqual(Object.get_object_name('dynamic_cube'),
+                         'dynamic_cube')
+        self.assertEqual(
+            Object.get_object_name(self.dynamic_cube.get_handle()),
+            'dynamic_cube')
+
+    def test_get_object(self):
+        self.assertEqual(Object.get_object('dynamic_cube'),
+                         self.dynamic_cube)
+        self.assertEqual(Object.get_object('dummy'),
+                         self.dummy)
+        self.assertEqual(Object.get_object(self.dynamic_cube.get_handle()),
+                         self.dynamic_cube)
+        self.assertEqual(Object.get_object(self.dummy.get_handle()),
+                         self.dummy)
+
     def test_equality(self):
         cube2 = Shape('dynamic_cube')
         self.assertEqual(self.dynamic_cube, cube2)
@@ -32,7 +55,8 @@ class TestObjects(TestCore):
 
     def test_still_exists(self):
         self.assertTrue(self.dynamic_cube.still_exists())
-        self.assertFalse(Shape(-1).still_exists())
+        self.dynamic_cube.remove()
+        self.assertFalse(self.dynamic_cube.still_exists())
 
     def test_object_exists(self):
         yes = Object.exists('dynamic_cube')

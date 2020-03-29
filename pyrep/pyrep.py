@@ -12,6 +12,7 @@ import threading
 from threading import Lock
 from typing import Tuple, List
 import numpy as np
+import warnings
 
 
 class PyRep(object):
@@ -209,6 +210,17 @@ class PyRep(object):
         :param dt: The time step value in seconds.
         """
         sim.simSetFloatParameter(sim.sim_floatparam_simulation_time_step, dt)
+        if not np.allclose(self.get_simulation_timestep(), dt):
+            warnings.warn('Could not change simulation timestep. You may need '
+                          'to change it to "custom dt" using simulation '
+                          'settings dialog.')
+
+    def get_simulation_timestep(self) -> float:
+        """Gets the simulation time step.
+
+        :return: The time step value in seconds.
+        """
+        return sim.simGetSimulationTimeStep()
 
     @staticmethod
     def set_configuration_tree(config_tree: bytes) -> None:
@@ -244,8 +256,19 @@ class PyRep(object):
         :return: A single merged shape.
         """
         handles = [o.get_handle() for o in objects]
-        handle = sim.simGroupShapes(handles, merge=True)
-        return Shape(handle)
+        # FIXME: sim.simGroupShapes(merge=True) won't return correct handle,
+        # so we use name to find correct handle of the merged shape.
+        name = objects[-1].get_name()
+        sim.simGroupShapes(handles, merge=True)
+        return Shape(name)
+
+    def export_scene(self, filename: str) -> None:
+        """Saves the current scene.
+
+        :param filename: scene filename. The filename extension is required
+            ("ttt").
+        """
+        sim.simSaveScene(filename)
 
     @staticmethod
     def import_model(filename: str) -> Object:

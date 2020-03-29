@@ -102,6 +102,19 @@ def simGetIkGroupHandle(ikGroupName):
     return handle
 
 
+def simSetIkElementProperties(ikGroupHandle, tipDummyHandle, constraints,
+                              precision=None, weight=None):
+    if precision is None:
+        precision = ffi.NULL
+    if weight is None:
+        weight = ffi.NULL
+    reserved = ffi.NULL
+    ret = lib.simSetIkElementProperties(
+        ikGroupHandle, tipDummyHandle, constraints, precision, weight, reserved)
+    _check_return(ret)
+    return ret
+
+
 def simGetObjectPosition(objectHandle, relativeToObjectHandle):
     position = ffi.new('float[3]')
     lib.simGetObjectPosition(objectHandle, relativeToObjectHandle, position)
@@ -172,6 +185,14 @@ def simGetJointInterval(jointHandle):
 def simSetJointInterval(jointHandle, cyclic, interval):
     ret = lib.simSetJointInterval(jointHandle, cyclic, interval)
     _check_return(ret)
+
+
+def simCreateForceSensor(options, intParams, floatParams, color):
+    if color is None:
+        color = ffi.NULL
+    handle = lib.simCreateForceSensor(options, intParams, floatParams, color)
+    _check_return(handle)
+    return handle
 
 
 def simBreakForceSensor(forceSensorHandle):
@@ -312,6 +333,12 @@ def simLoadScene(scenePathAndName):
 
 def simSaveModel(modelHandle, modelPathAndName):
     val = lib.simSaveModel(modelHandle, modelPathAndName.encode('ascii'))
+    _check_return(val)
+    return val
+
+
+def simSaveScene(filename):
+    val = lib.simSaveScene(filename.encode('ascii'))
     _check_return(val)
     return val
 

@@ -21,12 +21,12 @@ class Object(object):
             self._handle = name_or_handle
         else:
             self._handle = sim.simGetObjectHandle(name_or_handle)
-            assert_type = self._get_requested_type()
-            actual = ObjectType(sim.simGetObjectType(self._handle))
-            if actual != assert_type:
-                raise WrongObjectTypeError(
-                    'You requested object of type %s, but the actual type was '
-                    '%s' % (assert_type.name, actual.name))
+        assert_type = self._get_requested_type()
+        actual = ObjectType(sim.simGetObjectType(self._handle))
+        if actual != assert_type:
+            raise WrongObjectTypeError(
+                'You requested object of type %s, but the actual type was '
+                '%s' % (assert_type.name, actual.name))
 
         self._initial_position = self.get_position()
         self._initial_orientation = self.get_orientation()
@@ -58,6 +58,29 @@ class Object(object):
         :return: Type of the object.
         """
         return ObjectType(sim.simGetObjectType(sim.simGetObjectHandle(name)))
+
+    @staticmethod
+    def get_object_name(name_or_handle: Union[str, int]) -> str:
+        """Gets object name.
+
+        :return: Object name.
+        """
+        if isinstance(name_or_handle, int):
+            name = sim.simGetObjectName(name_or_handle)
+        else:
+            name = name_or_handle
+        return name
+
+    @staticmethod
+    def get_object(name_or_handle: str) -> 'Object':
+        """Gets object retrieved by name.
+
+        :return: The object.
+        """
+        name = Object.get_object_name(name_or_handle)
+        object_type = Object.get_object_type(name)
+        cls = object_type_to_class[object_type]
+        return cls(name)
 
     def _get_requested_type(self) -> ObjectType:
         """Used for internally checking assumptions user made about object type.
@@ -250,7 +273,9 @@ class Object(object):
         except RuntimeError:
             # Most probably no parent.
             return None
-        return Object(handle)
+        object_type = ObjectType(sim.simGetObjectType(handle))
+        cls = object_type_to_class.get(object_type, Object)
+        return cls(handle)
 
     def set_parent(self, parent_object: Union['Object', None],
                    keep_in_place=True) -> None:
