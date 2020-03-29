@@ -1,6 +1,5 @@
 import pyrep
 from typing import List, Tuple
-import numpy as np
 from pyrep.backend import sim
 from pyrep.objects.object import Object, object_type_to_class
 from pyrep.const import ObjectType, PrimitiveShape, TextureMappingMode
@@ -493,6 +492,10 @@ class Shape(Object):
             texture_options=info.textureOptions,
         )
         return res
+
+    def reorient_bounding_box(self, relative_to=None) -> None:
+        relto = -1 if relative_to is None else relative_to.get_handle()
+        sim.simReorientShapeBoundingBox(self._handle, relto)
 
     def _randomize_color(self, seed: int=None,
                          components: List[str]=[

@@ -203,8 +203,7 @@ class PyRep(object):
         with self._step_lock:
             sim.simExtStep(False)
 
-    @staticmethod
-    def set_simulation_timestep(dt: float) -> None:
+    def set_simulation_timestep(self, dt: float) -> None:
         """Sets the simulation time step. Default is 0.05.
 
         :param dt: The time step value in seconds.
@@ -338,6 +337,21 @@ class PyRep(object):
         for h in handles:
             objects.append(Object(h))
         return objects
+
+    def get_objects_in_tree(self, root_object=None, *args, **kwargs
+                            ) -> List[Object]:
+        """Retrieves the objects in a given hierarchy tree.
+
+        :param root_object: The root object in the tree. Pass None to retrieve
+            all objects in the configuration tree. :py:class:`Object` or `int`.
+        :param object_type: The object type to retrieve.
+            One of :py:class:`.ObjectType`.
+        :param exclude_base: Exclude the tree base from the returned list.
+        :param first_generation_only: Include in the returned list only the
+            object's first children. Otherwise, entire hierarchy is returned.
+        :return: A list of objects in the hierarchy tree.
+        """
+        return Object._get_objects_in_tree(root_object, *args, **kwargs)
 
     @staticmethod
     def get_lights(search_strings: List[str]=['light',
